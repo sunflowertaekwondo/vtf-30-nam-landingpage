@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+dist-ssr/
+*.local
+
+# Local reference archive folder (all web assets are in public/)
+hinh anh tham khao/
+
+# Vercel & IDE
+.vercel/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
