@@ -53,6 +53,7 @@ import {
 } from './data/vtf8ListsData';
 import { InteractiveBoosters, CalculatorTransferPayload } from './components/InteractiveBoosters';
 import { LeadAdminDrawer } from './components/LeadAdminDrawer';
+import { KateLinhChatbot } from './components/KateLinhChatbot';
 
 const STORAGE_KEY = 'vtf_30nam_submissions_v1';
 
@@ -2540,6 +2541,11 @@ export function App() {
         onResetSampleData={handleResetSampleData}
         onClearAll={handleClearAllSubmissions}
       />
+
+      {/* =========================================================
+          AI CHATBOT: KATELINH - THƯ KÝ VTF (KIRA AI + FULL SITE KNOWLEDGE)
+      ========================================================= */}
+      <KateLinhChatbot onNavigateSection={scrollToSection} />
     </div>
   );
 }
