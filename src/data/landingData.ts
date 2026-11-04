@@ -197,7 +197,7 @@ export const TIMELINE_MILESTONES: MilestoneItem[] = [
       'Nguyễn Văn Hùng (5 HCV SEA Games) & Nguyễn Thị Huyền Diệu (4 HCV SEA Games)',
       'Hàng loạt HCB, HCĐ tại ASIAD Busan 2002, Doha 2006, Quảng Châu 2010',
     ],
-    image: '/images/tran-hieu-ngan-sydney-2000.jpg',
+    image: '/images/timeline-stage3-sydney-2000.jpg',
     badge: 'Đỉnh Cao Sydney 2000',
   },
   {
