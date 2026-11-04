@@ -60,12 +60,28 @@ html {
   color: var(--text-primary);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  overflow-x: hidden;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+#root,
+.vtf-app-shell,
+main,
+section,
+header,
+footer {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 h1,
@@ -863,11 +879,11 @@ textarea {
   position: relative;
   height: 410px;
   overflow: hidden;
-  background: radial-gradient(circle at center, #2D1615 0%, #120E0D 100%);
+  background: radial-gradient(circle at center, #140D0C 0%, #060505 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 0;
 }
 
 .showcase-main-img {
@@ -877,7 +893,7 @@ textarea {
   height: 100%;
   object-fit: contain;
   object-position: center;
-  border-radius: 10px;
+  border-radius: 0;
   filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.65));
   transition: transform 0.5s ease;
 }
@@ -1507,13 +1523,13 @@ textarea {
   border-radius: 16px;
   overflow: hidden;
   height: 430px;
-  background: radial-gradient(circle at center, #2D1615 0%, #120E0D 100%);
+  background: radial-gradient(circle at center, #140D0C 0%, #060505 100%);
   border: 2px solid rgba(217, 119, 6, 0.42);
   box-shadow: 0 18px 40px -10px rgba(24, 19, 17, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 0;
 }
 
 .timeline-featured-img {
@@ -1522,7 +1538,7 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  border-radius: 10px;
+  border-radius: 0;
   filter: drop-shadow(0 12px 26px rgba(0, 0, 0, 0.68));
 }
 
@@ -1740,11 +1756,11 @@ textarea {
   position: relative;
   height: 290px;
   overflow: hidden;
-  background: radial-gradient(circle at center, #2D1615 0%, #120E0D 100%);
+  background: radial-gradient(circle at center, #120B0A 0%, #050404 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px 12px;
+  padding: 0;
   cursor: pointer;
 }
 
@@ -1755,7 +1771,7 @@ textarea {
   height: 100%;
   object-fit: contain;
   object-position: center;
-  border-radius: 8px;
+  border-radius: 0;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.72));
   transition: transform 0.35s ease;
 }
@@ -2720,11 +2736,11 @@ textarea {
   position: relative;
   height: 255px;
   overflow: hidden;
-  background: radial-gradient(circle at center, #2D1615 0%, #120E0D 100%);
+  background: radial-gradient(circle at center, #140D0C 0%, #060505 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 8px;
+  padding: 0;
 }
 
 .gallery-img {
@@ -2734,7 +2750,7 @@ textarea {
   height: 100%;
   object-fit: contain;
   object-position: center;
-  border-radius: 8px;
+  border-radius: 0;
   filter: drop-shadow(0 10px 22px rgba(0, 0, 0, 0.65));
   transition: transform 0.35s ease;
 }
@@ -3778,6 +3794,8 @@ textarea {
   }
   .mobile-menu-toggle {
     display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   .hero-grid,
   .timeline-featured-panel,
@@ -3806,42 +3824,606 @@ textarea {
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .container {
-    padding: 0 16px;
+    padding: 0 14px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
+
+  /* 1. Top Official Ribbon Mobile */
+  .top-official-ribbon {
+    padding: 6px 0;
+    font-size: 0.72rem;
+  }
+  .ribbon-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+  .ribbon-left {
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+  }
+  .ribbon-badge {
+    font-size: 0.64rem;
+    padding: 2px 6px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .ribbon-text {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+  .ribbon-right {
+    width: 100%;
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .ribbon-right::-webkit-scrollbar {
+    display: none;
+  }
+  .ribbon-doc-link {
+    font-size: 0.7rem;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  /* 2. Sticky Header Mobile (Zero Overflow, Always Visible Hamburger & Theme Toggle) */
+  .header-inner {
+    min-height: 58px;
+    gap: 6px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    width: 100%;
+    max-width: 100%;
+  }
+  .brand-logo-btn {
+    flex: 1 1 0%;
+    min-width: 0;
+    gap: 7px;
+    overflow: hidden;
+  }
+  .header-dual-logos {
+    padding: 3px 6px;
+    border-radius: 7px;
+    flex-shrink: 0;
+  }
+  .header-vtf-logo {
+    height: 24px;
+    width: auto;
+  }
+  .header-dual-logos .header-vt-logo,
+  .header-dual-logos .logo-divider {
+    display: none;
+  }
+  .brand-emblem {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    flex-shrink: 0;
+  }
+  .emblem-num {
+    font-size: 0.86rem;
+  }
+  .emblem-sub {
+    font-size: 0.5rem;
+  }
+  .brand-titles {
+    min-width: 0;
+    flex: 1 1 0%;
+    overflow: hidden;
+  }
+  .brand-titles .brand-kicker {
+    font-size: 0.54rem;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+  .brand-titles .brand-main {
+    font-size: 0.74rem;
+    font-weight: 800;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+  }
+  .header-actions {
+    gap: 5px;
+    flex-shrink: 0;
+  }
+  .header-cta-primary,
+  .theme-switch-btn span,
+  .admin-drawer-trigger {
+    display: none;
+  }
+  .theme-switch-btn,
+  .mobile-menu-toggle {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .mobile-nav-drawer {
+    padding: 12px 14px 16px;
+    gap: 6px;
+    max-height: calc(100dvh - 64px);
+    overflow-y: auto;
+  }
+  .mobile-nav-drawer button {
+    font-size: 0.84rem;
+    padding: 10px 12px;
+  }
+
+  /* 3. Section Spacing & Typography Mobile */
   .section-block {
-    padding: 46px 0;
+    padding: 38px 0;
   }
+  .section-header-center,
+  .section-header {
+    margin: 0 auto 24px;
+  }
+  .section-eyebrow,
+  .eyebrow-pill {
+    font-size: 0.66rem;
+    padding: 4px 10px;
+    margin-bottom: 8px;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.35;
+  }
+  .section-h2,
+  .section-header h2 {
+    font-size: 1.38rem;
+    line-height: 1.28;
+    margin-bottom: 10px;
+  }
+  .section-subtitle,
+  .section-sub {
+    font-size: 0.88rem;
+    line-height: 1.55;
+  }
+
+  /* 4. Hero Section Mobile */
   .hero-section {
-    padding: 28px 0 40px;
+    padding: 20px 0 32px;
+  }
+  .hero-grid {
+    gap: 22px;
+  }
+  .hero-eyebrow-pill {
+    font-size: 0.68rem;
+    padding: 5px 10px;
+    margin-bottom: 12px;
+    line-height: 1.35;
   }
   .hero-h1 {
-    font-size: 1.78rem;
-    line-height: 1.28;
+    font-size: 1.55rem;
+    line-height: 1.26;
+    margin-bottom: 12px;
+  }
+  .hero-lead {
+    font-size: 0.9rem;
+    line-height: 1.58;
+    margin-bottom: 18px;
+  }
+  .hero-cta-group {
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .btn-primary-gold,
+  .btn-primary,
+  .btn-secondary-outline {
+    width: 100%;
+    padding: 12px 16px;
+    font-size: 0.88rem;
+    text-align: center;
+  }
+  .official-docs-strip {
+    padding: 12px;
+  }
+  .docs-strip-cards {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
   .showcase-image-wrap {
-    height: 290px;
+    height: 255px;
+  }
+  .showcase-corner-crest {
+    top: 8px;
+    right: 8px;
+    padding: 4px 8px;
+    gap: 5px;
+  }
+  .showcase-corner-crest img {
+    height: 18px;
+  }
+  .showcase-corner-crest span {
+    font-size: 0.64rem;
+  }
+  .showcase-floating-kpi {
+    top: auto;
+    bottom: 8px;
+    left: 8px;
+    right: 8px;
+    padding: 6px 10px;
+    background-color: rgba(18, 13, 12, 0.82);
+  }
+  .showcase-floating-kpi strong {
+    font-size: 0.82rem;
+  }
+  .showcase-floating-kpi span {
+    font-size: 0.68rem;
+  }
+  .showcase-caption-box {
+    padding: 14px;
+  }
+  .showcase-slide-title {
+    font-size: 1.05rem;
+  }
+  .showcase-slide-desc {
+    font-size: 0.82rem;
+    margin-bottom: 12px;
+  }
+  .showcase-switcher-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .showcase-tab-btn {
+    padding: 7px 9px;
+    min-width: 0;
+  }
+  .tab-label {
+    font-size: 0.73rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+  .hero-metrics-grid {
+    margin-top: 22px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .metric-heritage-card {
+    padding: 12px;
+  }
+  .metric-big-value {
+    font-size: 1.32rem;
+  }
+  .metric-card-title {
+    font-size: 0.84rem;
+  }
+  .metric-card-detail {
+    font-size: 0.74rem;
+    line-height: 1.4;
+  }
+
+  /* 5. Section 2: Speeches & Messages Mobile */
+  .messages-dual-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .honor-letter-card {
+    padding: 16px 14px;
+  }
+  .letter-seal-header {
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+  }
+  .seal-icon-box,
+  .president-avatar-thumb {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+  }
+  .letter-author {
+    font-size: 0.96rem;
+    line-height: 1.3;
+  }
+  .letter-corner-logo {
+    display: none;
+  }
+  .letter-quote-body {
+    font-size: 0.86rem;
+    line-height: 1.6;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .point-chip {
+    font-size: 0.74rem;
+    padding: 5px 10px;
+    border-radius: 10px;
+    line-height: 1.35;
+  }
+  .letter-card-actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .btn-read-full-speech,
+  .btn-download-speech-doc {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
+
+  /* 6. Section 3: Timeline 6 Stages Mobile */
+  .timeline-stepper-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .timeline-step-pill {
+    padding: 9px 10px;
+    border-radius: 10px;
+    min-width: 0;
+  }
+  .step-year {
+    font-size: 0.72rem;
+    margin-bottom: 2px;
+  }
+  .step-phase {
+    font-size: 0.75rem;
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .timeline-featured-panel {
+    padding: 14px;
+    gap: 16px;
+    margin-bottom: 16px;
   }
   .timeline-featured-media {
-    height: 300px;
+    height: 235px;
+    border-radius: 12px;
+  }
+  .timeline-badge-overlay {
+    top: 10px;
+    left: 10px;
+    padding: 4px 10px;
+    font-size: 0.68rem;
+  }
+  .timeline-stage-title {
+    font-size: 1.18rem;
+    line-height: 1.3;
+  }
+  .timeline-stage-sub {
+    font-size: 0.86rem;
+    margin-bottom: 8px;
+  }
+  .timeline-stage-desc {
+    font-size: 0.85rem;
+    line-height: 1.55;
+    margin-bottom: 12px;
+  }
+  .timeline-highlights-list li {
+    font-size: 0.82rem;
+  }
+  .timeline-mini-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .brand-evolution-strip {
+    margin-top: 22px;
+    padding: 16px 14px;
+  }
+  .brand-evo-cards {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* 7. Section 4: Hall of Fame Mobile */
+  .sacred-chair-tribute {
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .chair-text-col h3 {
+    font-size: 0.98rem;
+    line-height: 1.35;
+  }
+  .chair-text-col p {
+    font-size: 0.83rem;
+  }
+  .hof-filter-bar {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    gap: 8px;
+    margin-bottom: 20px;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .hof-filter-bar::-webkit-scrollbar {
+    display: none;
+  }
+  .hof-filter-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 7px 13px;
+    font-size: 0.78rem;
+  }
+  .hof-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
   }
   .hof-card-img-wrap {
     height: 250px;
   }
-  .gallery-img-box {
-    height: 225px;
+  .hof-badges-strip {
+    padding: 8px 12px;
+    gap: 6px;
+    flex-wrap: nowrap;
   }
-  .timeline-stepper-bar {
-    grid-template-columns: repeat(2, 1fr);
+  .hof-category-badge {
+    font-size: 0.67rem;
+    padding: 3px 9px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hof-dan-badge {
+    font-size: 0.65rem;
+    padding: 3px 7px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .hof-card-body {
+    padding: 16px;
+  }
+  .hof-member-name {
+    font-size: 1.08rem;
+    line-height: 1.3;
+  }
+
+  /* 8. Section 5: 8 Personnel Lists Mobile */
+  .vtf-8lists-summary-card,
+  .directory-controls-card {
+    padding: 14px;
+  }
+  .vtf-8lists-summary-head {
+    gap: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+  .vtf-8lists-summary-head h3 {
+    font-size: 0.94rem;
+    line-height: 1.35;
+  }
+  .vtf-8lists-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
   }
-  .docs-strip-cards,
-  .hero-metrics-grid,
-  .messages-dual-grid,
-  .timeline-mini-grid,
-  .hof-cards-grid,
-  .directory-cards-grid,
+  .btn-sheet-link,
+  .vtf-8lists-actions .btn-download-speech-doc {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 6px;
+    font-size: 0.74rem;
+    white-space: nowrap;
+  }
+  .vtf-8lists-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+  .vtf-list-summary-item {
+    padding: 10px;
+    min-width: 0;
+  }
+  .list-sum-top {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .list-sum-code {
+    font-size: 0.64rem;
+  }
+  .list-sum-count {
+    font-size: 0.64rem;
+    padding: 1px 6px;
+  }
+  .list-sum-title {
+    font-size: 0.78rem;
+    line-height: 1.3;
+  }
+  .list-sum-note {
+    font-size: 0.68rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .vtf-8lists-total-bar {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+  .total-bar-left {
+    font-size: 0.78rem;
+    line-height: 1.4;
+  }
+  .total-bar-right {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .mini-filter-pill {
+    text-align: center;
+    padding: 7px 6px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+  .dir-search-box input {
+    font-size: 0.85rem;
+    padding: 10px 34px 10px 36px;
+  }
+  .dir-group-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    padding-bottom: 6px;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .dir-group-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .dir-tab-chip {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 0.76rem;
+    padding: 7px 11px;
+  }
+  .dir-extra-filters {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .dir-branch-select {
+    width: 100%;
+  }
+  .dir-branch-select select {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    font-size: 0.8rem;
+  }
+  .directory-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .dir-person-card {
+    padding: 14px;
+  }
+
+  /* 9. Section 6, 7, 8, 9 & Footer Mobile */
   .gala-master-banner,
   .yearbook-parts-grid,
   .ten-firsts-grid,
@@ -3852,51 +4434,77 @@ textarea {
   .form-row-2,
   .footer-grid,
   .cert-body-grid,
-  .brand-evo-cards,
-  .passport-inputs {
+  .passport-inputs,
+  .quiz-opts {
     grid-template-columns: 1fr;
   }
-  .honor-letter-card,
-  .timeline-featured-panel,
-  .vtf-8lists-summary-card,
-  .directory-controls-card,
+  .gala-tabs-header,
+  .booster-tabs {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .gala-tab-btn,
+  .booster-tab-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    text-align: center;
+  }
+  .gallery-filter-pills {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .gallery-filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+  .gallery-pill-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 0.78rem;
+    padding: 7px 14px;
+  }
+  .gallery-img-box {
+    height: 225px;
+  }
   .portal-form-card,
   .official-contact-box,
   .faq-accordion-box,
   .calc-controls-card,
-  .calc-result-card {
-    padding: 18px 16px;
+  .calc-result-card,
+  .poll-card,
+  .passport-quiz-card,
+  .gold-edition-banner {
+    padding: 16px 14px;
   }
-  .letter-corner-logo {
-    display: none;
+  .portal-form-title {
+    font-size: 1.2rem;
+    line-height: 1.3;
   }
-  .brand-titles .brand-kicker {
-    font-size: 0.62rem;
+  .sig-col {
+    min-width: 0;
+    width: 100%;
   }
-  .brand-titles .brand-main {
-    font-size: 0.82rem;
-  }
-  .header-dual-logos .header-vt-logo,
-  .header-dual-logos .logo-divider {
-    display: none;
-  }
-  .showcase-switcher-tabs {
-    grid-template-columns: repeat(2, 1fr);
-  }
-  .header-cta-primary,
-  .theme-switch-btn span {
-    display: none;
-  }
+
+  /* 10. Sticky Bottom Action Bar Mobile */
   .mobile-sticky-bottom-bar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
     z-index: 95;
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px));
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 8px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
     background-color: var(--bg-surface);
     border-top: 1.5px solid var(--border-strong);
     box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.14);
@@ -3906,11 +4514,13 @@ textarea {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 11px;
+    gap: 5px;
+    padding: 10px 8px;
     border-radius: 10px;
     font-weight: 800;
-    font-size: 0.84rem;
+    font-size: 0.78rem;
+    white-space: nowrap;
+    min-width: 0;
     cursor: pointer;
   }
   .mob-bar-btn-calc {
@@ -3924,7 +4534,19 @@ textarea {
     color: #FFFFFF;
   }
   .vtf-footer {
-    padding-bottom: 88px;
+    padding-bottom: 92px;
+  }
+}
+
+@media (max-width: 400px) {
+  .vtf-8lists-grid {
+    grid-template-columns: 1fr;
+  }
+  .vtf-8lists-actions {
+    grid-template-columns: 1fr;
+  }
+  .brand-titles .brand-main {
+    font-size: 0.69rem;
   }
 }
 
@@ -4373,15 +4995,61 @@ textarea {
   cursor: not-allowed;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .katelinh-floating-Launcher {
-    right: 14px;
-    bottom: 74px;
+    right: 12px;
+    bottom: 66px;
+  }
+  .katelinh-trigger-btn {
+    padding: 8px 13px 8px 9px;
+    gap: 8px;
+    box-shadow: 0 10px 26px rgba(153, 27, 27, 0.45);
+  }
+  .katelinh-avatar-badge {
+    width: 34px;
+    height: 34px;
+  }
+  .katelinh-trigger-kicker {
+    font-size: 0.58rem;
+  }
+  .katelinh-trigger-text strong {
+    font-size: 0.8rem;
   }
   .katelinh-chat-window {
-    right: 10px;
-    bottom: 72px;
-    width: calc(100vw - 20px);
-    height: min(560px, calc(100vh - 140px));
+    left: 8px;
+    right: 8px;
+    bottom: 66px;
+    width: auto;
+    max-width: calc(100vw - 16px);
+    height: min(530px, calc(100dvh - 134px));
+    border-radius: 16px;
+  }
+  .katelinh-chat-header {
+    padding: 11px 12px;
+  }
+  .katelinh-header-avatar {
+    width: 36px;
+    height: 36px;
+  }
+  .katelinh-header-avatar img {
+    width: 28px;
+  }
+  .katelinh-name-row h3 {
+    font-size: 0.9rem;
+  }
+  .katelinh-header-left p {
+    font-size: 0.68rem;
+  }
+  .katelinh-messages-body {
+    padding: 10px;
+  }
+  .katelinh-msg-bubble {
+    max-width: 95%;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
+  .katelinh-input-bar input {
+    font-size: 16px; /* Prevents iOS Safari auto-zoom on input focus */
+    padding: 8px 10px;
   }
 }

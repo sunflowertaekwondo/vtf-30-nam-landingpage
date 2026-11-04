@@ -475,6 +475,15 @@ export function App() {
             </button>
             <button
               type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                setIsAdminDrawerOpen(true);
+              }}
+            >
+              Kho Hồ Sơ Đề Cử Đã Lưu ({submissions.length})
+            </button>
+            <button
+              type="button"
               className="mobile-nav-cta"
               onClick={() => scrollToSection('portal-register')}
             >
