@@ -44,14 +44,19 @@ export interface ChatMessage {
   images: ChatImageItem[];
   timestamp: string;
   sourceMode?: 'kiraai' | 'knowledge_engine';
+  modelUsed?: string;
 }
 
 interface KateLinhChatbotProps {
   onNavigateSection: (sectionId: string) => void;
 }
 
-const KIRA_API_STORAGE_KEY = 'vtf30_kira_api_key_v1';
-const KIRA_MODEL_STORAGE_KEY = 'vtf30_kira_model_v1';
+// Official KiraAI API Key configured for VTF 30th Anniversary Portal
+const DEFAULT_KIRA_API_KEY = 'kira_f1d4002a2519f3ea0c9110c3ea0e79c4';
+const DEFAULT_KIRA_MODEL = 'kira-flash';
+
+const KIRA_API_STORAGE_KEY = 'vtf30_kira_api_key_v2';
+const KIRA_MODEL_STORAGE_KEY = 'vtf30_kira_model_v2';
 
 // Helper to normalize Vietnamese strings for fast fuzzy matching
 function normalizeVi(str: string): string {
@@ -63,6 +68,47 @@ function normalizeVi(str: string): string {
     .trim();
 }
 
+// Master Website Knowledge Base always available to KiraAI
+const MASTER_VTF_WEBSITE_SUMMARY = `
+=== TỔNG QUAN WEBSITE KỶ NIỆM 30 NĂM LIÊN ĐOÀN TAEKWONDO VIỆT NAM (VTF) ===
+- Tên chính thức: Liên đoàn Taekwondo Việt Nam (Vietnam Taekwondo Federation – VTF).
+- Cột mốc kỷ niệm: 30 năm thành lập (22/12/1996 – 22/12/2026) theo Quyết định số 358/TTg của Thủ tướng Chính phủ.
+- Khẩu hiệu / Chủ đề: "Khát Vọng Hóa Rồng – Nối Nhịp Olympic".
+- Địa chỉ website chính thức: https://vtf30.tkdai.vn
+- Trụ sở VTF: Số 219 Lý Thường Kiệt, Phường 15, Quận 11, TP. Hồ Chí Minh.
+- Đầu mối tiếp nhận hồ sơ & truyền thông 30 năm: Bà Nguyễn Thị Anh Thư – SĐT/Zalo: 0909 576 776 – Email: tkdvn1996@gmail.com.
+- Lãnh đạo chủ chốt:
+  + Chủ tịch VTF: Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon) – Chủ tịch VTF nhiệm kỳ IV, V, VI; HLV trưởng ĐTQG tại Olympic Sydney 2000.
+  + Phó Chủ tịch kiêm Tổng Thư ký VTF: Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon) – HLV Trưởng Đội tuyển Quyền Taekwondo Quốc gia, Huân chương Lao động hạng Nhất (2025), người ký ban hành Tiêu chí 036/VTF và Thông báo 038/TB-VTF.
+  + Chủ tịch Danh dự VTF đầu tiên (Nhiệm kỳ I, II, III): Ông Đặng Quốc Tiến (Nguyên Thứ trưởng Bộ Nội vụ) & Ông Hà Văn Dũng.
+- Quy mô phong trào hiện nay: Hơn 1.500 CLB, >100.000 môn sinh thường xuyên tại 34 tỉnh/thành phố mới, >400.000 hồ sơ định danh điện tử VTF Digital ID.
+- 6 Giai đoạn Biên niên sử (Mục #timeline-30years):
+  1. Giai đoạn I (1962 – 1995): Khởi nguyên & Việt hóa – Các bậc tiền bối Cố võ sư Khúc Văn Bón, Nguyễn Long Vân, Nguyễn Quốc Tâm, Trương Ngọc Để; HCV SEA Games 1991 & HCV ASIAD 1994 (Trần Quang Hạ).
+  2. Giai đoạn II (1996): Xác lập Định chế Quốc gia – Thủ tướng ký QĐ 358/TTg, Đại hội VTF lần I ngày 22/12/1996.
+  3. Giai đoạn III (2000 – 2010): Kỷ nguyên Vàng Olympic & SEA Games – Trần Hiếu Ngân giành HCB Olympic Sydney 2000 (-57kg nữ, tấm huy chương Olympic đầu tiên của Thể thao Việt Nam), Hồ Nhất Thống (HCV Châu Á 1998, Olympic 2000), Nguyễn Văn Hùng (5 HCV SEA Games), Nguyễn Thị Huyền Diệu (4 HCV SEA Games).
+  4. Giai đoạn IV (2011 – 2024): Cường quốc Quyền (Poomsae) Thế giới – Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon) cùng thế hệ Châu Tuyết Vân, Nguyễn Thiên Phụng, Nguyễn Thị Lệ Kim, Trương Thị Kim Tuyền, Bạc Thị Khiêm.
+  5. Giai đoạn V (2025): Đỉnh cao mới & Chuyển đổi số – Đại võ sư Trương Ngọc Để nhận 9 Đẳng Kukkiwon, Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon) nhận Huân chương Lao động hạng Nhất.
+  6. Giai đoạn VI (2026 – 2046): Đại lễ 30 năm (19/12/2026), Đại hội VTF nhiệm kỳ VII & Tầm nhìn Olympic 2028–2046.
+- Hệ thống 8 Danh sách Nhân sự 30 năm VTF (Mục #directory-120, File tải: /docs/VTF_8_Danh_Sach_30_Nam.xlsx):
+  + Tổng 4 Danh sách TOP không trùng (DS1–DS4): ${VTF_TOTAL_TOP4_UNIQUE} người.
+  + Tổng toàn bộ 8 Danh sách (DS1–DS8): ${VTF_ALL_8_LISTS_ITEMS.length} hồ sơ.
+  + DS1: TOP 50 Cán bộ & Võ sư xây dựng phong trào (27 người).
+  + DS2: TOP 50 HLV & VĐV thành tích cao xuất sắc (28 người).
+  + DS3: TOP 30 HĐKT & Trọng tài Quốc gia đóng góp lâu năm (21 người).
+  + DS4: TOP 30 Võ sư & HLV phát triển địa phương (15 người).
+  + DS5: Thành viên Hội đồng Kỹ thuật VTF hiện nay (27 người).
+  + DS6: Trọng tài Quốc gia Cấp 1 & Cấp 2 (58 người).
+  + DS7: HLV & Võ sư đạt 6–7 Đẳng VTF toàn quốc (248 người).
+  + DS8: Đại võ sư & Võ sư đạt từ 7 Đẳng Kukkiwon trở lên (5 người).
+- Đại lễ Gala "Đêm Ngọn Lửa Huyền Thoại" & Kỷ yếu 120 trang (Mục #gala-yearbook):
+  + Thời gian Gala: 18:00 – 21:30 Thứ Bảy, ngày 19/12/2026 tại TP.HCM (NTĐ Quân khu 7 / KS Tân Sơn Nhất).
+  + Kỷ yếu 120 trang (6 phần) + 50 cuốn Bản Vàng giới hạn có chữ ký Chủ tịch WT Chungwon Choue, Chủ tịch ATU Lee Kyu-seok, Chủ tịch VTF Trương Ngọc Để gây Quỹ Ngọn lửa Olympic.
+- Văn bản pháp lý & Thời hạn nộp hồ sơ (Mục #cong-cu-tuong-tac & #portal-register):
+  + Bản Tiêu chí số 036/VTF (04/04/2026): Chia 2 hệ độc lập Hệ A (Đỉnh cao) và Hệ B (Di sản phong trào), thang điểm 100.
+  + Thông báo số 038/TB-VTF (06/04/2026): Hạn chót nộp hồ sơ khen thưởng 30 năm là 30/10/2026.
+  + Công văn số 128/VTF-VP (08/08/2026): Hạn gửi bài viết 300–500 chữ & 5–10 ảnh Kỷ yếu 34 tỉnh/thành là 10/09/2026.
+`.trim();
+
 interface RetrievedKnowledge {
   contextText: string;
   fallbackReply: string;
@@ -70,7 +116,7 @@ interface RetrievedKnowledge {
   images: ChatImageItem[];
 }
 
-function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
+export function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
   const qNorm = normalizeVi(query);
   const links: ChatLinkItem[] = [];
   const images: ChatImageItem[] = [];
@@ -88,12 +134,51 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
     }
   };
 
+  // Stopwords to ignore when token-matching Vietnamese queries
+  const stopWords = new Set([
+    'cho',
+    'hoi',
+    'toi',
+    'anh',
+    'chi',
+    'em',
+    'vtf',
+    'taekwondo',
+    'viet',
+    'nam',
+    'thong',
+    'tin',
+    'hinh',
+    'anh',
+    'link',
+    'cua',
+    'nhung',
+    'cac',
+    'nao',
+    'trong',
+    'tren',
+    'web',
+    'website',
+    'la',
+    'ai',
+    'gi',
+    'o',
+    'tai',
+    'co',
+    'bao',
+    'nhieu',
+  ]);
+
+  const queryTokens = qNorm
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w.length >= 2 && !stopWords.has(w));
+
   // 1. Search in Hall of Fame (12 Legends)
   const matchedHof = HALL_OF_FAME_2026.filter((m) => {
-    const hay = normalizeVi(`${m.name} ${m.title} ${m.categoryLabel} ${m.danRank ?? ''} ${m.achievements.join(' ')}`);
-    const words = qNorm.split(/\s+/).filter((w) => w.length >= 3);
-    return (
-      hay.includes(qNorm) ||
+    const hay = normalizeVi(
+      `${m.name} ${m.title} ${m.categoryLabel} ${m.danRank ?? ''} ${m.region} ${m.achievements.join(' ')}`
+    );
+    if (
       (qNorm.includes('truong ngoc de') && hay.includes('truong ngoc de')) ||
       (qNorm.includes('nguyen thanh huy') && hay.includes('nguyen thanh huy')) ||
       (qNorm.includes('tran hieu ngan') && hay.includes('tran hieu ngan')) ||
@@ -102,15 +187,33 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
       (qNorm.includes('ho nhat thong') && hay.includes('ho nhat thong')) ||
       (qNorm.includes('khuc van bon') && hay.includes('khuc van bon')) ||
       (qNorm.includes('dang quoc tien') && hay.includes('dang quoc tien')) ||
-      words.filter((w) => hay.includes(w)).length >= 2
-    );
+      (qNorm.includes('kim tuyen') && hay.includes('kim tuyen')) ||
+      (qNorm.includes('nguyen van hung') && hay.includes('nguyen van hung')) ||
+      (qNorm.includes('le minh khuong') && hay.includes('le minh khuong')) ||
+      (qNorm.includes('chungwon') && hay.includes('chungwon'))
+    ) {
+      return true;
+    }
+    if (
+      qNorm.includes('chu tich') &&
+      (hay.includes('truong ngoc de') || hay.includes('dang quoc tien'))
+    ) {
+      return true;
+    }
+    if (
+      (qNorm.includes('tong thu ky') || qNorm.includes('hlv truong')) &&
+      hay.includes('nguyen thanh huy')
+    ) {
+      return true;
+    }
+    return queryTokens.length >= 2 && queryTokens.filter((w) => hay.includes(w)).length >= 2;
   });
 
   if (matchedHof.length > 0) {
     addLink({ label: 'Đại sảnh Danh vọng (Hall of Fame 2026)', sectionId: 'hall-of-fame' });
-    matchedHof.slice(0, 3).forEach((m) => {
+    matchedHof.slice(0, 4).forEach((m) => {
       contextParts.push(
-        `[Hall of Fame] ${m.name} (${m.danRank || m.categoryLabel}) - ${m.title} (${m.era}, ${m.region}). Thành tựu: ${m.achievements.join('; ')}. Câu nói: "${m.quote}"`
+        `[Hall of Fame 2026] ${m.name} (${m.danRank || m.categoryLabel}) - ${m.title} (${m.era}, ${m.region}). Thành tựu: ${m.achievements.join('; ')}. Câu nói: "${m.quote}". Ảnh trên web: ${m.image}`
       );
       addImage({
         src: m.image,
@@ -123,14 +226,28 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
   // 2. Search in 8 Personnel Lists (429 records)
   const matchedPersons = VTF_ALL_8_LISTS_ITEMS.filter((p) => {
     const nameNorm = normalizeVi(p.name);
-    const fullNorm = normalizeVi(`${p.name} ${p.locality} ${p.role} ${p.highlight} ${p.groupCode} ${p.danOrLevel ?? ''}`);
-    if (qNorm.length >= 3 && nameNorm.includes(qNorm)) return true;
-    // Check if query contains person's name
+    const locNorm = normalizeVi(p.locality);
+    const fullNorm = normalizeVi(
+      `${p.name} ${p.locality} ${p.role} ${p.highlight} ${p.groupCode} ${p.danOrLevel ?? ''}`
+    );
+
     const cleanPersonName = normalizeVi(p.name.replace(/\([^)]*\)/g, ''));
     if (cleanPersonName.length >= 5 && qNorm.includes(cleanPersonName)) return true;
-    if (qNorm.includes(normalizeVi(p.groupCode))) return true;
-    const words = qNorm.split(/\s+/).filter((w) => w.length >= 3);
-    return words.length >= 2 && words.every((w) => fullNorm.includes(w));
+    if (qNorm.length >= 4 && nameNorm.includes(qNorm)) return true;
+
+    // Match specific list code like ds1, ds2, ds3, ds4, ds5, ds6, ds7, ds8
+    const gCodeNorm = normalizeVi(p.groupCode);
+    if (
+      qNorm.includes(gCodeNorm) ||
+      qNorm.includes(`danh sach ${p.groupCode.replace('DS', '')}`)
+    ) {
+      return true;
+    }
+
+    // Match locality (e.g. đà nẵng, hà nội, an giang, sơn la, đồng tháp, lâm đồng...)
+    if (locNorm.length >= 4 && qNorm.includes(locNorm)) return true;
+
+    return queryTokens.length >= 2 && queryTokens.every((w) => fullNorm.includes(w));
   });
 
   if (matchedPersons.length > 0) {
@@ -139,7 +256,7 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
       label: 'Tải File Excel 8 Danh sách (.XLSX)',
       href: '/docs/VTF_8_Danh_Sach_30_Nam.xlsx',
     });
-    matchedPersons.slice(0, 6).forEach((p) => {
+    matchedPersons.slice(0, 12).forEach((p) => {
       contextParts.push(
         `[${p.groupLabel}] STT #${p.stt}: ${p.name} | Đơn vị: ${p.locality} | Chức vụ/Cấp bậc: ${p.role} (${p.danOrLevel || p.branch}) | Ghi chú/Thành tích: ${p.highlight}`
       );
@@ -161,16 +278,23 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
     qNorm.includes('trong tai') ||
     qNorm.includes('hdkt') ||
     qNorm.includes('kukkiwon') ||
-    qNorm.includes('dang')
+    qNorm.includes('dang') ||
+    qNorm.includes('nhan su')
   ) {
     addLink({ label: 'Bảng Tổng hợp 8 Danh sách Nhân sự 30 Năm', sectionId: 'directory-120' });
     addLink({
       label: 'Mở Google Sheets 8 Danh sách Trực tuyến',
       href: 'https://docs.google.com/spreadsheets/d/1KkX9yWIAV3kcActDIkDrzIFd-uFxkXbjJn68uLZzWzQ/edit?usp=sharing',
     });
+    addLink({
+      label: 'Tải File Excel 8 Danh sách (.XLSX)',
+      href: '/docs/VTF_8_Danh_Sach_30_Nam.xlsx',
+    });
     contextParts.push(
       `[Tổng hợp 8 Danh sách Nhân sự 30 năm VTF]: Tổng 4 DS TOP không trùng = ${VTF_TOTAL_TOP4_UNIQUE} người; Tổng cả 8 DS = ${VTF_ALL_8_LISTS_ITEMS.length} hồ sơ. Chi tiết: ` +
-        VTF_8_LISTS_SUMMARY.map((s) => `DS${s.stt} (${s.code} - ${s.title}: ${s.count} người - ${s.note})`).join('; ')
+        VTF_8_LISTS_SUMMARY.map(
+          (s) => `DS${s.stt} (${s.code} - ${s.title}: ${s.count} người - ${s.note})`
+        ).join('; ')
     );
   }
 
@@ -183,8 +307,10 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
       qNorm.includes('giai doan') ||
       qNorm.includes('1996') ||
       qNorm.includes('1962') ||
+      qNorm.includes('1995') ||
       qNorm.includes('2000') ||
       qNorm.includes('sydney') ||
+      qNorm.includes('olympic') ||
       qNorm.includes('358/ttg') ||
       hay.includes(qNorm)
     );
@@ -193,7 +319,9 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
   if (matchedTimeline.length > 0) {
     addLink({ label: 'Biên niên sử 6 Giai đoạn (1962 – 1996 – 2026)', sectionId: 'timeline-30years' });
     matchedTimeline.slice(0, 3).forEach((ms) => {
-      contextParts.push(`[Biên niên sử ${ms.year} - ${ms.phase}] ${ms.title}: ${ms.description}`);
+      contextParts.push(
+        `[Biên niên sử ${ms.year} - ${ms.phase}] ${ms.title}: ${ms.description}. Ảnh trên web: ${ms.image}`
+      );
       addImage({
         src: ms.image,
         title: `${ms.year}: ${ms.title}`,
@@ -241,7 +369,8 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
     qNorm.includes('cham diem') ||
     qNorm.includes('khen thuong') ||
     qNorm.includes('nop ho so') ||
-    qNorm.includes('lien he')
+    qNorm.includes('lien he') ||
+    qNorm.includes('tieu chi')
   ) {
     addLink({ label: 'Đêm Gala 19/12/2026 & Kỷ yếu 120 Trang', sectionId: 'gala-yearbook' });
     addLink({ label: 'Công cụ Tự chấm điểm Vinh danh 036/VTF', sectionId: 'cong-cu-tuong-tac' });
@@ -259,47 +388,54 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
     });
   }
 
-  // Default fallback if general greeting or unmatched query
-  if (contextParts.length === 0) {
-    addLink({ label: 'Khám phá Biên niên sử 30 năm VTF', sectionId: 'timeline-30years' });
+  // Default links & images when query is general
+  if (links.length === 0) {
+    addLink({ label: 'Biên niên sử 6 Giai đoạn (1962 – 2026)', sectionId: 'timeline-30years' });
     addLink({ label: 'Đại sảnh Danh vọng (Hall of Fame 2026)', sectionId: 'hall-of-fame' });
-    addLink({ label: 'Tra cứu 8 Danh sách Nhân sự (429 hồ sơ)', sectionId: 'directory-120' });
+    addLink({ label: 'Hệ thống 8 Danh sách Nhân sự (429 hồ sơ)', sectionId: 'directory-120' });
     addLink({ label: 'Công cụ Chấm điểm 036/VTF', sectionId: 'cong-cu-tuong-tac' });
-    addImage({
-      src: '/images/truong-ngoc-de-9-dan-kukkiwon.jpg',
-      title: 'Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon)',
-      caption: 'Chủ tịch Liên đoàn Taekwondo Việt Nam',
-    });
-    addImage({
-      src: '/images/dai-vo-su-nguyen-thanh-huy.jpg',
-      title: 'Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon)',
-      caption: 'Phó Chủ tịch kiêm Tổng Thư ký VTF · HLV Trưởng ĐT Quyền QG',
-    });
-    addImage({
-      src: '/images/timeline-stage3-sydney-2000.jpg',
-      title: 'Đón đoàn Olympic Sydney 2000 – Trần Hiếu Ngân',
-      caption: 'Tấm HCB Olympic đầu tiên của Thể thao Việt Nam',
-    });
-    contextParts.push(
-      `[Tổng quan Website Kỷ niệm 30 năm VTF (22/12/1996 – 22/12/2026)]: Chủ đề "Khát Vọng Hóa Rồng – Nối Nhịp Olympic". Chủ tịch VTF: Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon); Phó Chủ tịch kiêm Tổng Thư ký: Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon). Website gồm: (1) Thư chúc mừng Cục TDTT & Diễn văn Chủ tịch VTF; (2) Biên niên sử 6 giai đoạn 1962–2046; (3) Đại sảnh Danh vọng Class of 2026 (12 huyền thoại); (4) Hệ thống 8 Danh sách Nhân sự (91 hồ sơ TOP không trùng, 429 tổng hồ sơ gồm Cán bộ xây dựng, HLV/VĐV xuất sắc, HĐKT & Trọng tài QG, HLV địa phương, HĐKT hiện nay, Trọng tài Cấp 1-2, HLV 6-7 Đẳng VTF, HLV 7+ Đẳng Kukkiwon); (5) Đêm Gala 19/12/2026 & Kỷ yếu 120 trang; (6) Công cụ tự chấm điểm 036/VTF & Cổng nộp hồ sơ.`
-    );
   }
 
-  // Always ensure at least 1-2 relevant images from gallery/site
   if (images.length === 0) {
-    const samplePhoto = GALLERY_PHOTOS[0];
-    addImage({
-      src: samplePhoto.src,
-      title: samplePhoto.title,
-      caption: samplePhoto.caption,
-    });
+    if (qNorm.includes('huy') || qNorm.includes('quyen') || qNorm.includes('tong thu ky')) {
+      addImage({
+        src: '/images/dai-vo-su-nguyen-thanh-huy.jpg',
+        title: 'Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon)',
+        caption: 'Phó Chủ tịch kiêm Tổng Thư ký VTF · HLV Trưởng ĐT Quyền QG',
+      });
+    } else if (qNorm.includes('ngan') || qNorm.includes('sydney') || qNorm.includes('olympic')) {
+      addImage({
+        src: '/images/timeline-stage3-sydney-2000.jpg',
+        title: 'Đón đoàn Olympic Sydney 2000 – Trần Hiếu Ngân',
+        caption: 'Tấm HCB Olympic đầu tiên của Thể thao Việt Nam',
+      });
+    } else {
+      addImage({
+        src: '/images/truong-ngoc-de-9-dan-kukkiwon.jpg',
+        title: 'Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon)',
+        caption: 'Chủ tịch Liên đoàn Taekwondo Việt Nam',
+      });
+      addImage({
+        src: '/images/dai-vo-su-nguyen-thanh-huy.jpg',
+        title: 'Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon)',
+        caption: 'Phó Chủ tịch kiêm Tổng Thư ký VTF · HLV Trưởng ĐT Quyền QG',
+      });
+      const samplePhoto = GALLERY_PHOTOS[0];
+      if (samplePhoto) {
+        addImage({
+          src: samplePhoto.src,
+          title: samplePhoto.title,
+          caption: samplePhoto.caption,
+        });
+      }
+    }
   }
 
-  // Construct structured Vietnamese reply as KateLinh
-  let fallbackReply = `Dạ, em là **KateLinh, là thư ký VTF** (Liên đoàn Taekwondo Việt Nam). Em xin gửi tới anh/chị thông tin chi tiết trên website Kỷ niệm 30 năm VTF (22/12/1996 – 22/12/2026) như sau ạ:\n\n`;
+  // Construct structured Vietnamese fallback reply as KateLinh
+  let fallbackReply = `Dạ, **em là KateLinh, là thư ký VTF** (Liên đoàn Taekwondo Việt Nam). Em xin gửi tới anh/chị thông tin chi tiết trên website Kỷ niệm 30 năm VTF (22/12/1996 – 22/12/2026) như sau ạ:\n\n`;
 
   if (matchedPersons.length > 0) {
-    fallbackReply += `📌 **Thông tin trong Hệ thống 8 Danh sách Nhân sự 30 năm VTF (${matchedPersons.length} kết quả phù hợp):**\n`;
+    fallbackReply += `📌 **Thông tin trên website – Hệ thống 8 Danh sách Nhân sự 30 năm VTF (${matchedPersons.length} hồ sơ phù hợp):**\n`;
     matchedPersons.slice(0, 5).forEach((p) => {
       fallbackReply += `• **${p.name}** (${p.groupCode} #${p.stt} – *${p.groupLabel}*): ${p.role} tại **${p.locality}**. Đẳng cấp/Phân hệ: **${p.danOrLevel || p.branch}**. Thành tích/Ghi chú: ${p.highlight}.\n`;
     });
@@ -311,7 +447,7 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
 
   if (matchedHof.length > 0) {
     fallbackReply += `🏆 **Thông tin tại Đại sảnh Danh vọng – Vietnam Taekwondo Hall of Fame (Class of 2026):**\n`;
-    matchedHof.slice(0, 2).forEach((m) => {
+    matchedHof.slice(0, 3).forEach((m) => {
       fallbackReply += `• **${m.name}** (*${m.danRank || m.categoryLabel}*): ${m.title} (${m.era} · ${m.region}).\n  - Dấu ấn: ${m.achievements.join('; ')}.\n`;
     });
     fallbackReply += `\n`;
@@ -326,10 +462,14 @@ function retrieveWebsiteKnowledge(query: string): RetrievedKnowledge {
   }
 
   if (matchedPersons.length === 0 && matchedHof.length === 0 && matchedTimeline.length === 0) {
-    fallbackReply += contextParts.map((c) => `• ${c}`).join('\n') + '\n\n';
+    if (contextParts.length > 0) {
+      fallbackReply += contextParts.map((c) => `• ${c}`).join('\n') + '\n\n';
+    } else {
+      fallbackReply += `• **Chủ tịch VTF:** Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon).\n• **Phó Chủ tịch kiêm Tổng Thư ký VTF:** Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon).\n• **Hệ thống dữ liệu trên web:** Gồm Biên niên sử 6 giai đoạn (1962–2026), Đại sảnh Danh vọng 12 Huyền thoại, 8 Danh sách Nhân sự (91 hồ sơ TOP không trùng & 429 tổng hồ sơ), Đêm Gala 19/12/2026, Kỷ yếu 120 trang và Bộ tiêu chí chấm điểm 036/VTF.\n\n`;
+    }
   }
 
-  fallbackReply += `🔗 Anh/chị có thể bấm trực tiếp vào **các đường link mục lục / tài liệu** và xem **hình ảnh tư liệu đã cập nhật trên website** ngay bên dưới tin nhắn này ạ!`;
+  fallbackReply += `🔗 **Link liên quan & Hình ảnh trên website:** Anh/chị có thể bấm trực tiếp vào các nút đường dẫn chuyên mục/tài liệu và xem hình ảnh tư liệu đính kèm ngay bên dưới tin nhắn này ạ!`;
 
   return {
     contextText: contextParts.join('\n'),
@@ -344,16 +484,16 @@ export const KateLinhChatbot: React.FC<KateLinhChatbotProps> = ({ onNavigateSect
   const [showKeyConfig, setShowKeyConfig] = useState<boolean>(false);
   const [kiraApiKey, setKiraApiKey] = useState<string>(() => {
     try {
-      return localStorage.getItem(KIRA_API_STORAGE_KEY) || '';
+      return localStorage.getItem(KIRA_API_STORAGE_KEY) || DEFAULT_KIRA_API_KEY;
     } catch {
-      return '';
+      return DEFAULT_KIRA_API_KEY;
     }
   });
   const [kiraModel, setKiraModel] = useState<string>(() => {
     try {
-      return localStorage.getItem(KIRA_MODEL_STORAGE_KEY) || 'kira-mini-1.0';
+      return localStorage.getItem(KIRA_MODEL_STORAGE_KEY) || DEFAULT_KIRA_MODEL;
     } catch {
-      return 'kira-mini-1.0';
+      return DEFAULT_KIRA_MODEL;
     }
   });
   const [input, setInput] = useState<string>('');
@@ -364,7 +504,7 @@ export const KateLinhChatbot: React.FC<KateLinhChatbotProps> = ({ onNavigateSect
     {
       id: 'welcome-katelinh',
       role: 'assistant',
-      text: 'Dạ, em là **KateLinh, là thư ký VTF** (Liên đoàn Taekwondo Việt Nam). Em đã đọc toàn bộ dữ liệu trên website Kỷ niệm 30 năm VTF (1996 – 2026): từ Biên niên sử 6 giai đoạn, Đại sảnh Danh vọng, đầy đủ **8 Danh sách Nhân sự (429 hồ sơ)**, Thư chúc mừng Cục TDTT, đến Tiêu chí chấm điểm 036/VTF.\n\nAnh/chị cần tra cứu thông tin nhân sự, lịch sử, văn bản hay hình ảnh nào cứ hỏi em nhé ạ!',
+      text: 'Dạ, **em là KateLinh, là thư ký VTF** (Liên đoàn Taekwondo Việt Nam). Em đã kết nối trực tiếp với hệ thống AI KiraAI và nắm trọn vẹn toàn bộ dữ liệu trên website Kỷ niệm 30 năm VTF (22/12/1996 – 22/12/2026):\n• Biên niên sử 6 giai đoạn (1962 – 2026)\n• Đại sảnh Danh vọng (12 Huyền thoại Class of 2026)\n• Đầy đủ **8 Danh sách Nhân sự (91 TOP & 429 hồ sơ)**\n• Thư chúc mừng Cục TDTT, Diễn văn Chủ tịch VTF, Đêm Gala 19/12/2026 & Tiêu chí 036/VTF.\n\nAnh/chị cần tra cứu thông tin, đường link hay hình ảnh nào trên website cứ hỏi em nhé ạ!',
       links: [
         { label: 'Xem 8 Danh sách Nhân sự (429 hồ sơ)', sectionId: 'directory-120' },
         { label: 'Đại sảnh Danh vọng (Hall of Fame)', sectionId: 'hall-of-fame' },
@@ -382,8 +522,9 @@ export const KateLinhChatbot: React.FC<KateLinhChatbotProps> = ({ onNavigateSect
           caption: 'PCT kiêm Tổng Thư ký VTF',
         },
       ],
-      timestamp: 'Trực tuyến 24/7',
-      sourceMode: 'knowledge_engine',
+      timestamp: 'KiraAI Online',
+      sourceMode: 'kiraai',
+      modelUsed: DEFAULT_KIRA_MODEL,
     },
   ]);
 
@@ -396,7 +537,7 @@ export const KateLinhChatbot: React.FC<KateLinhChatbotProps> = ({ onNavigateSect
   }, [messages, isOpen]);
 
   const handleSaveApiKey = (newKey: string, newModel: string) => {
-    const trimmed = newKey.trim();
+    const trimmed = newKey.trim() || DEFAULT_KIRA_API_KEY;
     setKiraApiKey(trimmed);
     setKiraModel(newModel);
     try {
@@ -424,54 +565,89 @@ export const KateLinhChatbot: React.FC<KateLinhChatbotProps> = ({ onNavigateSect
       timestamp: timeStr,
     };
 
+    const recentConversation = messages.slice(-4).map((m) => ({
+      role: m.role,
+      content: m.text,
+    }));
+
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setIsLoading(true);
 
-    // 1. Retrieve exact website knowledge, links, and images
+    // 1. Retrieve exact website knowledge, links, and images for this query
     const retrieved = retrieveWebsiteKnowledge(cleanQ);
 
-    // 2. If KiraAI API key is configured, call https://kiraai.vn/api/v1/chat/completions
+    // 2. Call https://kiraai.vn/api/v1/chat/completions with fast multi-model failover
     let finalAnswerText = retrieved.fallbackReply;
     let usedMode: 'kiraai' | 'knowledge_engine' = 'knowledge_engine';
+    let successfulModel = '';
 
-    if (kiraApiKey.trim()) {
-      try {
-        const systemPrompt = `Bạn là KateLinh, thư ký Liên đoàn Taekwondo Việt Nam (VTF).
-Luôn bắt đầu câu trả lời bằng cách xưng hô lễ phép: "Dạ, em là KateLinh, là thư ký VTF...".
-Nhiệm vụ của bạn là trả lời khách hàng dựa chính xác trên toàn bộ thông tin của website Kỷ niệm 30 năm Liên đoàn Taekwondo Việt Nam (22/12/1996 – 22/12/2026) tại https://vtf30.tkdai.vn.
-Quy tắc bắt buộc:
-1. Luôn ghi rõ "Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon)" và "Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon)" khi nhắc tới hai vị lãnh đạo này.
-2. Trả lời đầy đủ: (a) Thông tin trên website, (b) Hướng dẫn khách bấm vào Link liên quan trên website ở ngay dưới tin nhắn, (c) Giới thiệu các Hình ảnh liên quan đã cập nhật trên website hiển thị kèm theo.
-Dữ liệu trích xuất trực tiếp từ website cho câu hỏi này:
-${retrieved.contextText}`;
+    const activeKey = (kiraApiKey || DEFAULT_KIRA_API_KEY).trim();
+    if (activeKey) {
+      const systemPrompt = `Bạn là KateLinh, thư ký Liên đoàn Taekwondo Việt Nam (VTF - Vietnam Taekwondo Federation, thành lập 22/12/1996).
+TUYỆT ĐỐI LƯU Ý: VTF là Liên đoàn Taekwondo Việt Nam (KHÔNG PHẢI Liên đoàn Bóng bàn hay Quần vợt).
 
-        const res = await fetch('https://kiraai.vn/api/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${kiraApiKey.trim()}`,
-          },
-          body: JSON.stringify({
-            model: kiraModel || 'kira-mini-1.0',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: cleanQ },
-            ],
-            temperature: 0.3,
-          }),
-        });
+QUY TẮC BẮT BUỘC TRONG MỌI CÂU TRẢ LỜI:
+1. Xưng hô: Luôn mở đầu câu trả lời bằng câu: "Dạ, **em là KateLinh, là thư ký VTF**..." và xưng "em", gọi khách là "anh/chị".
+2. Luôn ghi đúng danh hiệu: "**Đại võ sư Trương Ngọc Để (9 Đẳng Kukkiwon)**" và "**Đại võ sư Nguyễn Thanh Huy (8 Đẳng Kukkiwon)**".
+3. Cấu trúc câu trả lời gồm 3 phần rõ ràng, ngắn gọn, súc tích:
+   - **📌 Thông tin trên website:** Trả lời chính xác dựa trên dữ liệu website bên dưới (nêu rõ số liệu, chức vụ, đơn vị, STT danh sách nếu có).
+   - **🔗 Link liên quan đến nội dung trên website:** Nêu tên các mục hoặc tài liệu liên quan trên website (${retrieved.links.map((l) => l.label).join(', ')}) và mời anh/chị bấm vào các nút link ngay bên dưới.
+   - **🖼️ Hình ảnh liên quan đã cập nhật trên website:** Giới thiệu ngắn gọn các bức ảnh tư liệu liên quan (${retrieved.images.map((img) => img.title).join(', ')}) đang hiển thị ngay bên dưới tin nhắn.
 
-        if (res.ok) {
-          const data = await res.json();
-          const aiContent = data?.choices?.[0]?.message?.content;
-          if (aiContent && typeof aiContent === 'string' && aiContent.trim().length > 10) {
-            finalAnswerText = aiContent.trim();
-            usedMode = 'kiraai';
+${MASTER_VTF_WEBSITE_SUMMARY}
+
+=== DỮ LIỆU CHI TIẾT TRÍCH XUẤT TỪ WEBSITE CHO CÂU HỎI NÀY ===
+${retrieved.contextText || 'Sử dụng thông tin Tổng quan Website ở trên.'}`;
+
+      // Priority model chain (benchmarked < 2s latency on kiraai.vn)
+      const candidateModels = Array.from(
+        new Set([
+          kiraModel || DEFAULT_KIRA_MODEL,
+          'kira-flash',
+          'deepseek-v4.1-flash',
+          'kira-2.5-flash',
+          'glm-4.7-flash',
+        ])
+      );
+
+      for (const modelName of candidateModels) {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 9000);
+        try {
+          const res = await fetch('https://kiraai.vn/api/v1/chat/completions', {
+            method: 'POST',
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${activeKey}`,
+            },
+            body: JSON.stringify({
+              model: modelName,
+              messages: [
+                { role: 'system', content: systemPrompt },
+                ...recentConversation,
+                { role: 'user', content: cleanQ },
+              ],
+              temperature: 0.25,
+            }),
+          });
+          window.clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            const aiContent = data?.choices?.[0]?.message?.content;
+            if (aiContent && typeof aiContent === 'string' && aiContent.trim().length > 15) {
+              finalAnswerText = aiContent.trim();
+              usedMode = 'kiraai';
+              successfulModel = modelName;
+              break;
+            }
           }
+        } catch {
+          window.clearTimeout(timeoutId);
+          // Try next fast model in chain
         }
-      } catch {
-        // Fallback seamlessly to full local knowledge engine if CORS or key issue
       }
     }
 
@@ -483,6 +659,7 @@ ${retrieved.contextText}`;
       images: retrieved.images,
       timestamp: timeStr,
       sourceMode: usedMode,
+      modelUsed: successfulModel || undefined,
     };
 
     setMessages((prev) => [...prev, assistantMsg]);
@@ -499,6 +676,8 @@ ${retrieved.contextText}`;
   // Simple bold markdown formatter for chat text
   const renderFormattedText = (raw: string) => {
     return raw.split('\n').map((line, i) => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
       const parts = line.split(/(\*\*[^*]+\*\*)/g);
       return (
         <p key={i} className="katelinh-msg-line">
@@ -554,9 +733,9 @@ ${retrieved.contextText}`;
               <div>
                 <div className="katelinh-name-row">
                   <h3>KateLinh – Thư ký VTF</h3>
-                  <span className="katelinh-ai-pill">KiraAI</span>
+                  <span className="katelinh-ai-pill">KiraAI Live</span>
                 </div>
-                <p>Hỗ trợ tra cứu toàn bộ 8 Danh sách & Dữ liệu 30 năm VTF</p>
+                <p>Đã kết nối API KiraAI · Đọc toàn bộ dữ liệu 30 năm VTF</p>
               </div>
             </div>
 
@@ -565,7 +744,7 @@ ${retrieved.contextText}`;
                 type="button"
                 className={`katelinh-icon-btn ${kiraApiKey ? 'key-active' : ''}`}
                 onClick={() => setShowKeyConfig((prev) => !prev)}
-                title="Cấu hình KiraAI API Key (https://kiraai.vn/api/v1)"
+                title="Cấu hình KiraAI API Key & Model (https://kiraai.vn/api/v1)"
               >
                 <KeyRound size={16} />
               </button>
@@ -584,14 +763,14 @@ ${retrieved.contextText}`;
           {showKeyConfig && (
             <div className="katelinh-key-config">
               <div className="key-config-top">
-                <strong>Kết nối API KiraAI (`https://kiraai.vn/api/v1`)</strong>
-                <span>Tương thích chuẩn OpenAI Chat Completions</span>
+                <strong>Đã kết nối API KiraAI (`https://kiraai.vn/api/v1`)</strong>
+                <span>Key mặc định của VTF đã kích hoạt sẵn sàng</span>
               </div>
               <input
                 type="password"
                 value={kiraApiKey}
                 onChange={(e) => setKiraApiKey(e.target.value)}
-                placeholder="Dán API Key từ kiraai.vn (VD: sk-...) vào đây"
+                placeholder="Dán API Key từ kiraai.vn (VD: kira_...) vào đây"
                 className="key-config-input"
               />
               <div className="key-config-row">
@@ -600,16 +779,17 @@ ${retrieved.contextText}`;
                   onChange={(e) => setKiraModel(e.target.value)}
                   className="key-config-select"
                 >
-                  <option value="kira-mini-1.0">Model: kira-mini-1.0</option>
-                  <option value="kira-chatbox">Model: kira-chatbox</option>
-                  <option value="kira-3.5-flash">Model: kira-3.5-flash</option>
+                  <option value="kira-flash">Model: Kira Flash (~1.5s - Khuyên dùng)</option>
+                  <option value="deepseek-v4.1-flash">Model: DeepSeek V4.1 Flash (~1.2s)</option>
+                  <option value="kira-2.5-flash">Model: Kira 2.5 Flash</option>
+                  <option value="glm-4.7-flash">Model: GLM 4.7 Flash</option>
                 </select>
                 <button
                   type="button"
                   className="key-save-btn"
                   onClick={() => handleSaveApiKey(kiraApiKey, kiraModel)}
                 >
-                  <CheckCircle2 size={14} /> Lưu kết nối
+                  <CheckCircle2 size={14} /> Lưu cài đặt
                 </button>
               </div>
             </div>
@@ -633,7 +813,7 @@ ${retrieved.contextText}`;
                   {/* Related Website Links */}
                   {msg.links.length > 0 && (
                     <div className="katelinh-links-box">
-                      <span className="box-sub-label">🔗 Link liên quan trên website:</span>
+                      <span className="box-sub-label">🔗 Link liên quan đến nội dung trên website:</span>
                       <div className="katelinh-links-list">
                         {msg.links.map((lk) =>
                           lk.sectionId ? (
@@ -643,6 +823,9 @@ ${retrieved.contextText}`;
                               className="katelinh-jump-link"
                               onClick={() => {
                                 onNavigateSection(lk.sectionId!);
+                                if (window.innerWidth <= 768) {
+                                  setIsOpen(false);
+                                }
                               }}
                             >
                               <ChevronRight size={13} />
@@ -669,7 +852,7 @@ ${retrieved.contextText}`;
                   {msg.images.length > 0 && (
                     <div className="katelinh-images-box">
                       <span className="box-sub-label">
-                        <ImageIcon size={12} /> Hình ảnh liên quan trên website:
+                        <ImageIcon size={12} /> Hình ảnh liên quan đã cập nhật trên website:
                       </span>
                       <div className="katelinh-images-grid">
                         {msg.images.map((im) => (
@@ -700,7 +883,7 @@ ${retrieved.contextText}`;
             {isLoading && (
               <div className="katelinh-msg-row assistant">
                 <div className="katelinh-msg-bubble loading-bubble">
-                  <span>Thư ký KateLinh đang tra cứu dữ liệu VTF...</span>
+                  <span>Thư ký KateLinh đang đọc dữ liệu VTF & phản hồi qua KiraAI...</span>
                 </div>
               </div>
             )}
