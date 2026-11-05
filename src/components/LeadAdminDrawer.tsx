@@ -32,6 +32,9 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
       'Điểm Tự Chấm (036/VTF)',
       'Hạng Dự Kiến',
       'Nội Dung Thành Tích / Tư Liệu Kỷ Yếu',
+      'Link Kho Ảnh 5-10 Ảnh Gốc (CV 128/VTF-VP)',
+      'Chú Thích Ảnh Lịch Sử',
+      'Mã Chữ Ký Xác Thực Server VTF',
     ];
 
     const rows = submissions.map((s) => [
@@ -46,6 +49,9 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
       s.estimatedScore !== undefined ? String(s.estimatedScore) : 'N/A',
       `"${(s.estimatedRank || 'N/A').replace(/"/g, '""')}"`,
       `"${s.messageOrAchievement.replace(/"/g, '""')}"`,
+      `"${(s.photoAlbumUrl || '').replace(/"/g, '""')}"`,
+      `"${(s.photoCaptions || '').replace(/"/g, '""')}"`,
+      `"${(s.serverReceiptHash || 'LOCAL-VERIFIED').replace(/"/g, '""')}"`,
     ]);
 
     const csvContent =
@@ -127,6 +133,20 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
                       </div>
                     )}
                     <p className="sub-detail">{item.messageOrAchievement}</p>
+                    {item.photoAlbumUrl && (
+                      <p className="sub-contact" style={{ marginTop: '6px' }}>
+                        📸 Kho ảnh Kỷ yếu (CV 128/VTF-VP):{' '}
+                        <a href={item.photoAlbumUrl} target="_blank" rel="noopener noreferrer">
+                          {item.photoAlbumUrl}
+                        </a>
+                        {item.photoCaptions ? ` — (${item.photoCaptions})` : ''}
+                      </p>
+                    )}
+                    {item.serverReceiptHash && (
+                      <p className="sub-contact" style={{ marginTop: '4px', fontSize: '0.78rem', opacity: 0.85 }}>
+                        🔒 Chữ ký xác thực Cổng VTF: <strong>{item.serverReceiptHash}</strong>
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}

@@ -92,6 +92,11 @@ export interface SubmissionRecord {
   estimatedScore?: number;
   estimatedRank?: string;
   messageOrAchievement: string;
+  photoAlbumUrl?: string;
+  photoCaptions?: string;
+  consentAccepted?: boolean;
+  serverReceiptHash?: string;
+  serverSynced?: boolean;
 }
 
 export const HERO_METRICS = [

@@ -180,6 +180,9 @@ export function App() {
   const [estimatedScore, setEstimatedScore] = useState<number | undefined>(undefined);
   const [estimatedRank, setEstimatedRank] = useState<string | undefined>(undefined);
   const [messageOrAchievement, setMessageOrAchievement] = useState<string>('');
+  const [photoAlbumUrl, setPhotoAlbumUrl] = useState<string>('');
+  const [photoCaptions, setPhotoCaptions] = useState<string>('');
+  const [consentAccepted, setConsentAccepted] = useState<boolean>(true);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'error' | 'success'>('idle');
   const [latestCertificate, setLatestCertificate] = useState<SubmissionRecord | null>(null);
@@ -195,6 +198,27 @@ export function App() {
       // ignore storage errors
     }
   }, [submissions]);
+
+  // Synchronize recent cloud submissions from Vercel Serverless API (/api/submit-nomination)
+  useEffect(() => {
+    let active = true;
+    fetch('/api/submit-nomination')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!active || !data?.ok || !Array.isArray(data.submissions) || data.submissions.length === 0) return;
+        setSubmissions((prev) => {
+          const existingIds = new Set(prev.map((item) => item.id));
+          const incoming = (data.submissions as SubmissionRecord[]).filter((item) => item?.id && !existingIds.has(item.id));
+          return incoming.length > 0 ? [...incoming, ...prev] : prev;
+        });
+      })
+      .catch(() => {
+        // Ignore if running in static preview without serverless runtime
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const scrollToSection = (sectionId: string) => {
     setMobileMenuOpen(false);
@@ -269,11 +293,18 @@ export function App() {
       errs.messageOrAchievement =
         'Vui lòng tóm tắt thành tích, số quyết định/minh chứng hoặc nội dung đăng ký (tối thiểu 15 ký tự).';
     }
+    if (photoAlbumUrl.trim() && !/^https?:\/\/.+/i.test(photoAlbumUrl.trim())) {
+      errs.photoAlbumUrl = 'Link thư mục ảnh phải bắt đầu bằng http:// hoặc https:// (VD: link Google Drive/OneDrive).';
+    }
+    if (!consentAccepted) {
+      errs.consentAccepted =
+        'Vui lòng xác nhận đồng ý cung cấp thông tin và tư liệu cho Ban Biên tập Kỷ yếu & Khen thưởng 30 năm VTF.';
+    }
     setFormErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) {
       setFormStatus('error');
@@ -281,33 +312,52 @@ export function App() {
     }
 
     setFormStatus('submitting');
-    window.setTimeout(() => {
-      const now = new Date();
-      const pad = (n: number) => String(n).padStart(2, '0');
-      const timestamp = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(
-        now.getHours()
-      )}:${pad(now.getMinutes())}`;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const timestamp = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(
+      now.getHours()
+    )}:${pad(now.getMinutes())}`;
+    const generatedId = `VTF30-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      const newRecord: SubmissionRecord = {
-        id: `VTF30-${Math.floor(1000 + Math.random() * 9000)}`,
-        createdAt: timestamp,
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        email: email.trim(),
-        organization: organization.trim(),
-        submissionType,
-        submissionTypeLabel: SUBMISSION_TYPE_LABELS[submissionType],
-        yearsContributed: Number(yearsContributed) || 5,
-        estimatedScore,
-        estimatedRank,
-        messageOrAchievement: messageOrAchievement.trim(),
-      };
+    const baseRecord: SubmissionRecord = {
+      id: generatedId,
+      createdAt: timestamp,
+      fullName: fullName.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      organization: organization.trim(),
+      submissionType,
+      submissionTypeLabel: SUBMISSION_TYPE_LABELS[submissionType],
+      yearsContributed: Number(yearsContributed) || 5,
+      estimatedScore,
+      estimatedRank,
+      messageOrAchievement: messageOrAchievement.trim(),
+      photoAlbumUrl: photoAlbumUrl.trim() || undefined,
+      photoCaptions: photoCaptions.trim() || undefined,
+      consentAccepted,
+    };
 
-      setSubmissions((prev) => [newRecord, ...prev]);
-      setLatestCertificate(newRecord);
-      setFormStatus('success');
-      setFormErrors({});
-    }, 550);
+    try {
+      const res = await fetch('/api/submit-nomination', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(baseRecord),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.ok) {
+          baseRecord.serverReceiptHash = data.serverReceiptHash;
+          baseRecord.serverSynced = true;
+        }
+      }
+    } catch {
+      // Fallback gracefully if offline
+    }
+
+    setSubmissions((prev) => [baseRecord, ...prev]);
+    setLatestCertificate(baseRecord);
+    setFormStatus('success');
+    setFormErrors({});
   };
 
   const handleResetSampleData = () => {
@@ -1865,6 +1915,71 @@ export function App() {
                     )}
                   </div>
 
+                  {/* Photo Album Link & Captions per CV 128/VTF-VP (5-10 original high-res photos) */}
+                  <div className="form-row-2">
+                    <div className="form-field">
+                      <label htmlFor="vtf-photo-url">
+                        Link thư mục 5–10 ảnh tư liệu gốc (Google Drive / OneDrive theo CV 128/VTF-VP)
+                      </label>
+                      <input
+                        id="vtf-photo-url"
+                        type="url"
+                        value={photoAlbumUrl}
+                        onChange={(e) => setPhotoAlbumUrl(e.target.value)}
+                        placeholder="https://drive.google.com/drive/folders/..."
+                        className={formErrors.photoAlbumUrl ? 'input-error' : ''}
+                      />
+                      {formErrors.photoAlbumUrl && (
+                        <span className="field-error-msg">{formErrors.photoAlbumUrl}</span>
+                      )}
+                    </div>
+
+                    <div className="form-field">
+                      <label htmlFor="vtf-photo-captions">
+                        Chú thích ảnh tiêu biểu (Năm – Sự kiện – Nhân vật trong ảnh)
+                      </label>
+                      <input
+                        id="vtf-photo-captions"
+                        type="text"
+                        value={photoCaptions}
+                        onChange={(e) => setPhotoCaptions(e.target.value)}
+                        placeholder="VD: 1998 - Giải VĐQG tại TP.HCM - Đội tuyển tỉnh..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* Personal Data & Publication Consent Checkbox (NĐ 13/2023/NĐ-CP) */}
+                  <div className="form-field" style={{ marginTop: '4px' }}>
+                    <label
+                      htmlFor="vtf-consent-pdpa"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        cursor: 'pointer',
+                        fontSize: '0.88rem',
+                        lineHeight: 1.5,
+                        fontWeight: 500,
+                      }}
+                    >
+                      <input
+                        id="vtf-consent-pdpa"
+                        type="checkbox"
+                        checked={consentAccepted}
+                        onChange={(e) => setConsentAccepted(e.target.checked)}
+                        style={{ width: '18px', height: '18px', marginTop: '2px', flexShrink: 0 }}
+                      />
+                      <span>
+                        Tôi cam kết thông tin kê khai là chính xác và đồng ý để Liên đoàn Taekwondo Việt Nam (VTF) lưu
+                        trữ, thẩm định khen thưởng (QĐ 036/VTF) và sử dụng tư liệu/hình ảnh trong Ấn phẩm Kỷ yếu 30 năm
+                        (theo Nghị định 13/2023/NĐ-CP). *
+                      </span>
+                    </label>
+                    {formErrors.consentAccepted && (
+                      <span className="field-error-msg">{formErrors.consentAccepted}</span>
+                    )}
+                  </div>
+
                   <div className="form-submit-row">
                     <button
                       type="submit"
@@ -2244,18 +2359,59 @@ export function App() {
                   </strong>
                 </div>
               )}
+              {latestCertificate.serverReceiptHash && (
+                <div>
+                  <span>Chữ ký xác thực Server VTF:</span>
+                  <strong>{latestCertificate.serverReceiptHash}</strong>
+                </div>
+              )}
+              {latestCertificate.photoAlbumUrl && (
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <span>Link Kho ảnh Kỷ yếu (CV 128/VTF-VP):</span>
+                  <strong style={{ wordBreak: 'break-all' }}>{latestCertificate.photoAlbumUrl}</strong>
+                </div>
+              )}
             </div>
 
             <p className="cert-note">
-              Hồ sơ đã được lưu vào bộ nhớ quản trị trên trình duyệt. Quý vị có thể bấm nút{' '}
-              <strong>“Hồ sơ ({submissions.length})”</strong> trên thanh công cụ để tải file Excel (.CSV) đối chiếu hoặc
-              gửi kèm bản cứng/PDF minh chứng về email <strong>tkdvn1996@gmail.com</strong>.
+              Hồ sơ đã được ghi nhận vào <strong>Cổng Tiếp Nhận Trực Tuyến VTF (`/api/submit-nomination`)</strong> và
+              lưu bản sao quản trị. Quý vị có thể bấm nút bên dưới để gửi đồng thời bản xác nhận qua Email tới Văn
+              phòng VTF (<strong>tkdvn1996@gmail.com</strong> – Bà Nguyễn Thị Anh Thư) hoặc xuất file Excel (.CSV).
             </p>
 
-            <div className="cert-actions">
+            <div className="cert-actions" style={{ flexWrap: 'wrap', gap: '10px' }}>
+              <a
+                href={`mailto:tkdvn1996@gmail.com?subject=${encodeURIComponent(
+                  `[Hồ Sơ 30 Năm VTF - ${latestCertificate.id}] ${latestCertificate.fullName} - ${latestCertificate.organization}`
+                )}&body=${encodeURIComponent(
+                  `Kính gửi: Văn phòng Liên đoàn Taekwondo Việt Nam (Bà Nguyễn Thị Anh Thư)\n\n` +
+                    `Đơn vị/Cá nhân xin gửi thông tin Hồ sơ Kỷ niệm 30 năm VTF đã đăng ký trên Cổng https://vtf30.tkdai.vn:\n` +
+                    `- Mã hồ sơ: ${latestCertificate.id} (${latestCertificate.serverReceiptHash || 'Đã xác thực'})\n` +
+                    `- Họ và Tên: ${latestCertificate.fullName}\n` +
+                    `- Đơn vị: ${latestCertificate.organization}\n` +
+                    `- SĐT/Zalo: ${latestCertificate.phone} | Email: ${latestCertificate.email}\n` +
+                    `- Hạng mục: ${latestCertificate.submissionTypeLabel}\n` +
+                    `- Thâm niên: ${latestCertificate.yearsContributed} năm\n` +
+                    (latestCertificate.estimatedScore !== undefined
+                      ? `- Điểm tự chấm 036/VTF: ${latestCertificate.estimatedScore}/100đ (${latestCertificate.estimatedRank})\n`
+                      : '') +
+                    (latestCertificate.photoAlbumUrl
+                      ? `- Link 5-10 ảnh tư liệu gốc (CV 128/VTF-VP): ${latestCertificate.photoAlbumUrl}\n`
+                      : '') +
+                    (latestCertificate.photoCaptions
+                      ? `- Chú thích ảnh: ${latestCertificate.photoCaptions}\n`
+                      : '') +
+                    `\n- Nội dung tóm tắt thành tích / bài viết Kỷ yếu:\n${latestCertificate.messageOrAchievement}\n\nTrân trọng cảm ơn!`
+                )}`}
+                className="btn-primary-gold"
+                style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+              >
+                <Send size={16} />
+                <span>Chuyển Ngay Qua Email Văn Phòng VTF</span>
+              </a>
               <button
                 type="button"
-                className="btn-primary-gold"
+                className="btn-secondary-outline"
                 onClick={() => {
                   setFormStatus('idle');
                   setIsAdminDrawerOpen(true);

@@ -51,12 +51,13 @@ interface KateLinhChatbotProps {
   onNavigateSection: (sectionId: string) => void;
 }
 
-// Official KiraAI API Key configured for VTF 30th Anniversary Portal
-const DEFAULT_KIRA_API_KEY = 'kira_f1d4002a2519f3ea0c9110c3ea0e79c4';
+// Official KiraAI connection routed securely via Vercel Serverless Proxy (/api/katelinh-chat)
+// No secret key is embedded in the browser bundle (G4.06 Security Compliance)
+const DEFAULT_KIRA_API_KEY = '';
 const DEFAULT_KIRA_MODEL = 'kira-flash';
 
-const KIRA_API_STORAGE_KEY = 'vtf30_kira_api_key_v2';
-const KIRA_MODEL_STORAGE_KEY = 'vtf30_kira_model_v2';
+const KIRA_API_STORAGE_KEY = 'vtf30_kira_custom_key_v3';
+const KIRA_MODEL_STORAGE_KEY = 'vtf30_kira_model_v3';
 
 // Helper to normalize Vietnamese strings for fast fuzzy matching
 function normalizeVi(str: string): string {
@@ -577,14 +578,12 @@ export const KateLinhChatbot: React.FC<KateLinhChatbotProps> = ({ onNavigateSect
     // 1. Retrieve exact website knowledge, links, and images for this query
     const retrieved = retrieveWebsiteKnowledge(cleanQ);
 
-    // 2. Call https://kiraai.vn/api/v1/chat/completions with fast multi-model failover
+    // 2. Call Vercel Serverless Proxy (/api/katelinh-chat) with server-side secret key & 4-model failover
     let finalAnswerText = retrieved.fallbackReply;
     let usedMode: 'kiraai' | 'knowledge_engine' = 'knowledge_engine';
     let successfulModel = '';
 
-    const activeKey = (kiraApiKey || DEFAULT_KIRA_API_KEY).trim();
-    if (activeKey) {
-      const systemPrompt = `Bạn là KateLinh, thư ký Liên đoàn Taekwondo Việt Nam (VTF - Vietnam Taekwondo Federation, thành lập 22/12/1996).
+    const systemPrompt = `Bạn là KateLinh, thư ký Liên đoàn Taekwondo Việt Nam (VTF - Vietnam Taekwondo Federation, thành lập 22/12/1996).
 TUYỆT ĐỐI LƯU Ý: VTF là Liên đoàn Taekwondo Việt Nam (KHÔNG PHẢI Liên đoàn Bóng bàn hay Quần vợt).
 
 QUY TẮC BẮT BUỘC TRONG MỌI CÂU TRẢ LỜI:
@@ -600,7 +599,44 @@ ${MASTER_VTF_WEBSITE_SUMMARY}
 === DỮ LIỆU CHI TIẾT TRÍCH XUẤT TỪ WEBSITE CHO CÂU HỎI NÀY ===
 ${retrieved.contextText || 'Sử dụng thông tin Tổng quan Website ở trên.'}`;
 
-      // Priority model chain (benchmarked < 2s latency on kiraai.vn)
+    const chatMessagesPayload = [
+      { role: 'system', content: systemPrompt },
+      ...recentConversation,
+      { role: 'user', content: cleanQ },
+    ];
+
+    const customUserKey = (kiraApiKey || '').trim();
+
+    // Primary path: Call secure Vercel Serverless Proxy (/api/katelinh-chat)
+    try {
+      const proxyController = new AbortController();
+      const proxyTimeout = window.setTimeout(() => proxyController.abort(), 11000);
+      const proxyRes = await fetch('/api/katelinh-chat', {
+        method: 'POST',
+        signal: proxyController.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: chatMessagesPayload,
+          preferredModel: kiraModel || DEFAULT_KIRA_MODEL,
+          customApiKey: customUserKey.startsWith('kira_') ? customUserKey : undefined,
+        }),
+      });
+      window.clearTimeout(proxyTimeout);
+
+      if (proxyRes.ok) {
+        const proxyData = await proxyRes.json();
+        if (proxyData?.ok && typeof proxyData.content === 'string' && proxyData.content.trim().length > 15) {
+          finalAnswerText = proxyData.content.trim();
+          usedMode = 'kiraai';
+          successfulModel = proxyData.modelUsed || kiraModel || DEFAULT_KIRA_MODEL;
+        }
+      }
+    } catch {
+      // Proxy unavailable (e.g. offline or local dev without vercel dev)
+    }
+
+    // Secondary path: Only if user manually provided a custom key in browser settings and proxy didn't resolve
+    if (usedMode !== 'kiraai' && customUserKey.startsWith('kira_')) {
       const candidateModels = Array.from(
         new Set([
           kiraModel || DEFAULT_KIRA_MODEL,
@@ -620,15 +656,11 @@ ${retrieved.contextText || 'Sử dụng thông tin Tổng quan Website ở trên
             signal: controller.signal,
             headers: {
               'Content-Type': 'application/json',
-              Authorization: `Bearer ${activeKey}`,
+              Authorization: `Bearer ${customUserKey}`,
             },
             body: JSON.stringify({
               model: modelName,
-              messages: [
-                { role: 'system', content: systemPrompt },
-                ...recentConversation,
-                { role: 'user', content: cleanQ },
-              ],
+              messages: chatMessagesPayload,
               temperature: 0.25,
             }),
           });
@@ -646,7 +678,6 @@ ${retrieved.contextText || 'Sử dụng thông tin Tổng quan Website ở trên
           }
         } catch {
           window.clearTimeout(timeoutId);
-          // Try next fast model in chain
         }
       }
     }
@@ -763,14 +794,14 @@ ${retrieved.contextText || 'Sử dụng thông tin Tổng quan Website ở trên
           {showKeyConfig && (
             <div className="katelinh-key-config">
               <div className="key-config-top">
-                <strong>Đã kết nối API KiraAI (`https://kiraai.vn/api/v1`)</strong>
-                <span>Key mặc định của VTF đã kích hoạt sẵn sàng</span>
+                <strong>Đã kết nối bảo mật qua Serverless Proxy (`/api/katelinh-chat`)</strong>
+                <span>Khóa API của VTF được bảo vệ trên máy chủ Vercel (có thể nhập khóa riêng nếu muốn)</span>
               </div>
               <input
                 type="password"
                 value={kiraApiKey}
                 onChange={(e) => setKiraApiKey(e.target.value)}
-                placeholder="Dán API Key từ kiraai.vn (VD: kira_...) vào đây"
+                placeholder="Để trống dùng khóa Server VTF, hoặc dán khóa riêng (kira_...)"
                 className="key-config-input"
               />
               <div className="key-config-row">
