@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Award, Calculator, CheckCircle2, Flame, ShieldCheck, Sparkles, Trophy, ArrowRight } from 'lucide-react';
+import './DetailCalcLink.css';
 
 export interface CalculatorTransferPayload {
   branch: 'nomination_a' | 'nomination_b';
@@ -218,6 +219,18 @@ export const InteractiveBoosters: React.FC<InteractiveBoostersProps> = ({ onAppl
           <p className="section-sub">
             Áp dụng nguyên bản công thức lượng hóa 2 phân hệ độc lập do Ban Chấp hành Liên đoàn Taekwondo Việt Nam ban hành ngày 04/04/2026 — Minh bạch, không so sánh chéo, tự động xác định hạng vinh danh và kết nối thẳng xuống biểu mẫu đề cử.
           </p>
+          <div className="detail-calc-cta">
+            <a className="btn-primary-gold" href="/tinh-diem/index.html">
+              <Calculator size={18} />
+              <span>Máy tính chấm điểm chi tiết</span>
+            </a>
+            <p className="detail-calc-note">
+              Kiểm tra từng bậc điểm theo 036/VTF, lưu lịch sử hồ sơ, xuất Excel và in phiếu chấm điểm A4. Có thể tải về dùng không cần mạng.
+            </p>
+            <p className="detail-calc-note">
+              Máy tính bên dưới chỉ là bản chấm nhanh (chưa kiểm điều kiện nền và minh chứng). Hồ sơ đề xuất chính thức nên chấm bằng máy tính chi tiết.
+            </p>
+          </div>
         </div>
 
         <div className="booster-tabs" role="tablist" aria-label="Chọn công cụ tương tác">

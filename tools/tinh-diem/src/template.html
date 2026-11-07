@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Máy tính điểm vinh danh 30 năm VTF (036/VTF)</title>
+<meta name="description" content="Công cụ tính điểm khen thưởng, vinh danh 30 năm Liên đoàn Taekwondo Việt Nam theo Bản tiêu chí số 036/VTF: điều kiện nền, điểm từng trục, hạng và bảng kiểm tra chi tiết.">
+<style>
+/*__CSS__*/
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Bỏ qua đến nội dung chính</a>
+
+<header class="top">
+  <div class="wrap top-in">
+    <div>
+      <p class="eyebrow">Liên đoàn Taekwondo Việt Nam · Kỷ niệm 30 năm (1996 – 2026)</p>
+      <h1>Máy tính điểm vinh danh</h1>
+      <p class="sub">Theo Bản tiêu chí số 036/VTF ngày 04/04/2026</p>
+    </div>
+    <div class="top-links">
+      <a class="back" href="https://vtf30.tkdai.vn/">Trang kỷ niệm 30 năm</a>
+      <a class="back" id="offline-link" hidden>Tải bản dùng offline</a>
+    </div>
+  </div>
+</header>
+
+<main id="main" class="wrap">
+  <div class="notice" role="note">
+    <strong>Dữ liệu chỉ nằm trên máy này.</strong>
+    Công cụ không gửi thông tin đi đâu. Kết quả là chấm điểm sơ bộ, hạng cuối cùng do Hội đồng quyết định.
+  </div>
+  <div id="status" class="status" role="status"></div>
+
+  <nav class="tabs" aria-label="Chức năng">
+    <button type="button" class="tab" data-view="calc" aria-current="page">Tính điểm</button>
+    <button type="button" class="tab" data-view="history" id="tab-history">Lịch sử <span id="hist-count" class="count"></span></button>
+    <button type="button" class="tab" data-view="data" id="tab-data">Xuất &amp; Sao lưu</button>
+    <button type="button" class="tab" data-view="rules" id="tab-rules">Bảng tiêu chí</button>
+    <button type="button" class="tab tab-help" id="tab-guide">Hướng dẫn</button>
+  </nav>
+
+  <div id="view-calc">
+    <div id="guide"></div>
+    <section aria-labelledby="he-title" class="he-box">
+      <h2 id="he-title">1. Chọn hệ xét</h2>
+      <div id="he-chooser" class="he-cards"></div>
+    </section>
+
+    <div class="grid" id="work" hidden>
+      <form id="form" autocomplete="off" novalidate aria-label="Nhập thông tin hồ sơ"></form>
+      <aside id="result" class="result" aria-label="Lưu và kết quả tính điểm"></aside>
+    </div>
+  </div>
+
+  <section id="view-history" hidden aria-label="Lịch sử hồ sơ đã lưu"></section>
+  <section id="view-data" hidden aria-label="Xuất dữ liệu và sao lưu"></section>
+  <section id="view-rules" hidden aria-label="Bảng tiêu chí 036/VTF"></section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<div id="print-area" class="phieu" aria-hidden="true"></div>
+
+<div class="totalbar" id="totalbar" hidden>
+  <div class="totalbar-in wrap">
+    <div class="tb-score" aria-live="polite" id="tb-score"></div>
+    <a class="tb-link" href="#result">Xem chi tiết</a>
+  </div>
+</div>
+
+<script>
+/*__RULES__*/
+</script>
+<script>
+/*__ENGINE__*/
+</script>
+<script>
+/*__HISTORY__*/
+</script>
+<script>
+/*__XLSX__*/
+</script>
+<script>
+/*__BACKUP__*/
+</script>
+<script>
+/*__STORE__*/
+</script>
+<script>
+/*__UI__*/
+</script>
+</body>
+</html>
