@@ -1328,7 +1328,20 @@
     $('guide').addEventListener('click', onGuideClick);
     $('tab-guide').addEventListener('click', function () { showView('calc'); renderGuide(true); window.scrollTo(0, 0); });
     var off = $('offline-link');
-    if (/^https?:$/.test(window.location.protocol)) { off.href = window.location.pathname; off.setAttribute('download', 'VTF-Tinh-diem.html'); off.hidden = false; }
+    if (/^https?:$/.test(window.location.protocol)) {
+      off.href = window.location.pathname; off.hidden = false;
+      /* Tải qua Blob để tên tệp luôn là VTF-Tinh-diem.html: máy chủ Vercel gửi "Content-Disposition: filename=tinh-diem" (không có đuôi .html) và header này thắng thuộc tính download. */
+      off.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        fetch(window.location.pathname, { cache: 'no-store' }).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.text();
+        }).then(function (t) {
+          download('VTF-Tinh-diem.html', 'text/html;charset=utf-8', t);
+          toast('Đã tạo tệp VTF-Tinh-diem.html. Mở bằng cách bấm đúp, không cần mạng.');
+        }).catch(function () { toast('Không tải được tệp. Hãy kiểm tra mạng rồi thử lại.'); });
+      });
+    }
     statusEl.addEventListener('click', function (ev) {
       var b = ev.target.closest ? ev.target.closest('button') : null;
       if (b && b.getAttribute('data-act') === 'bk-json') doExport('json', 'all');
