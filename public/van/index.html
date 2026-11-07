@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Châu Tuyết Vân — Vận động viên Quyền Taekwondo</title>
+  <meta name="description" content="Hồ sơ vận động viên Châu Tuyết Vân: thành tích, hành trình tập luyện và những dấu ấn của một vận động viên Quyền Taekwondo xuất sắc của Việt Nam.">
+  <meta property="og:title" content="Châu Tuyết Vân — Vận động viên Quyền Taekwondo">
+  <meta property="og:description" content="Thành tích, hành trình và dấu ấn của vận động viên Quyền Taekwondo Châu Tuyết Vân.">
+  <meta property="og:type" content="profile">
+  <meta property="og:url" content="https://vtf30.tkdai.vn/van/">
+  <meta property="og:image" content="https://vtf30.tkdai.vn/van/assets/img/hero.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="canonical" href="https://vtf30.tkdai.vn/van/">
+  <meta name="theme-color" content="#c8102e">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%23c8102e'/%3E%3Ctext x='32' y='42' font-size='30' text-anchor='middle' fill='%23fff' font-family='Georgia,serif' font-weight='700'%3EV%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+  <a class="skip" href="#main" data-i="skip">Bỏ qua đến nội dung</a>
+  <div class="preview-banner" id="previewBanner" hidden></div>
+
+  <header class="site-header no-print" id="siteHeader">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top" aria-label="Châu Tuyết Vân">
+        <span class="brand-mark" aria-hidden="true">V</span>
+        <span class="brand-name">Châu Tuyết Vân</span>
+      </a>
+      <nav class="nav" id="nav" aria-label="Menu">
+        <a href="#tom-tat" data-i="navSummary">Tóm tắt</a>
+        <a href="#vinh-danh" data-i="navHonor">Vinh danh</a>
+        <a href="#thanh-tich" data-i="navResults">Thành tích</a>
+        <a href="#hanh-trinh" data-i="navJourney">Hành trình</a>
+        <a href="#hinh-anh" data-i="navGallery" id="navGallery">Hình ảnh</a>
+        <a href="#bao-chi" data-i="navPress">Báo chí</a>
+        <a href="#ngoai-san-dau" data-i="navBeyond">Ngoài sàn đấu</a>
+        <a href="#lien-he" data-i="navContact">Liên hệ</a>
+      </nav>
+      <div class="header-actions">
+        <a class="back-link" id="backLink" href="/#hall-of-fame" hidden>← <span data-i="backToHof">Di sản 30 năm VTF</span></a>
+        <button class="btn-lang" id="langBtn" type="button">EN</button>
+        <button class="btn-menu" id="menuBtn" type="button" aria-expanded="false" aria-controls="nav"><span class="bars" aria-hidden="true"></span><span class="sr-only" data-i="menu">Menu</span></button>
+      </div>
+    </div>
+  </header>
+
+  <noscript><p class="wrap noscript">Trang cần bật JavaScript để hiển thị nội dung. / Please enable JavaScript to view this page.</p></noscript>
+
+  <main id="main">
+    <!-- 1. HERO -->
+    <section class="hero" id="top">
+      <div class="wrap hero-grid">
+        <div class="hero-text">
+          <p class="eyebrow"><span data-i="heroEyebrow">Hồ sơ vận động viên</span></p>
+          <h1 class="hero-name" id="heroName">Châu Tuyết Vân</h1>
+          <p class="hero-role" id="heroRole"></p>
+          <p class="hero-tagline" id="heroTagline"></p>
+          <div class="hero-meta" id="heroMeta"></div>
+          <div class="hero-cta no-print">
+            <a class="btn btn-primary" href="#thanh-tich" data-i="heroCta1">Xem thành tích</a>
+            <button class="btn btn-ghost" type="button" id="printBtn1" data-i="heroCta2">In / Lưu PDF</button>
+          </div>
+        </div>
+        <figure class="hero-figure" id="heroFigure" aria-hidden="false"></figure>
+      </div>
+      <div class="wrap">
+        <ul class="stats" id="stats"></ul>
+      </div>
+    </section>
+
+    <!-- 2. TÓM TẮT -->
+    <section class="section" id="tom-tat" aria-labelledby="h-summary">
+      <div class="wrap narrow">
+        <h2 id="h-summary" data-i="summaryTitle">Tóm tắt trong 30 giây</h2>
+        <p class="lead" data-i="summaryLead"></p>
+        <ol class="summary-list" id="summaryList"></ol>
+      </div>
+    </section>
+
+    <!-- 3. VINH DANH -->
+    <section class="section honor" id="vinh-danh" aria-labelledby="h-honor">
+      <div class="wrap honor-grid" id="honor"></div>
+    </section>
+
+    <!-- 4. THÀNH TÍCH -->
+    <section class="section" id="thanh-tich" aria-labelledby="h-results">
+      <div class="wrap">
+        <h2 id="h-results" data-i="resultsTitle">Thành tích thi đấu</h2>
+        <p class="lead" data-i="resultsLead"></p>
+        <div class="filters no-print" id="filters"></div>
+        <p class="result-count" id="resultCount" aria-live="polite"></p>
+        <div class="timeline-results" id="results"></div>
+        <h3 class="sub" data-i="honoursTitle">Huân chương &amp; danh hiệu</h3>
+        <ul class="honours" id="honours"></ul>
+      </div>
+    </section>
+
+    <!-- 5. HÀNH TRÌNH -->
+    <section class="section alt" id="hanh-trinh" aria-labelledby="h-journey">
+      <div class="wrap">
+        <h2 id="h-journey" data-i="journeyTitle">Hành trình</h2>
+        <p class="lead" data-i="journeyLead"></p>
+        <div class="journey-grid">
+          <ol class="journey" id="journey"></ol>
+          <aside class="journey-side" id="journeySide"></aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. HÌNH ẢNH & VIDEO -->
+    <section class="section no-print" id="hinh-anh" aria-labelledby="h-gallery">
+      <div class="wrap">
+        <h2 id="h-gallery" data-i="galleryTitle">Hình ảnh</h2>
+        <p class="lead" id="galleryLead" data-i="galleryLead"></p>
+        <div class="gallery" id="gallery"></div>
+        <div id="videosBlock">
+          <h3 class="sub" data-i="videosTitle">Video</h3>
+          <ul class="videos" id="videos"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7. BÁO CHÍ -->
+    <section class="section alt no-print" id="bao-chi" aria-labelledby="h-press">
+      <div class="wrap">
+        <h2 id="h-press" data-i="pressTitle">Báo chí nói về Vân</h2>
+        <p class="lead" data-i="pressLead"></p>
+        <ul class="press" id="press"></ul>
+      </div>
+    </section>
+
+    <!-- 8. NGOÀI SÀN ĐẤU -->
+    <section class="section" id="ngoai-san-dau" aria-labelledby="h-beyond">
+      <div class="wrap">
+        <h2 id="h-beyond" data-i="beyondTitle">Ngoài sàn đấu</h2>
+        <div class="beyond" id="beyond"></div>
+      </div>
+    </section>
+
+    <!-- 9. LIÊN HỆ -->
+    <section class="section contact" id="lien-he" aria-labelledby="h-contact">
+      <div class="wrap narrow">
+        <h2 id="h-contact" data-i="contactTitle">Liên hệ</h2>
+        <p class="contact-note" id="contactNote"></p>
+        <ul class="contact-list" id="contactList"></ul>
+        <button class="btn btn-light no-print" type="button" id="printBtn2" data-i="contactPrint">In / Lưu hồ sơ PDF</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <p id="footerText"></p>
+    </div>
+  </footer>
+
+  <dialog class="lightbox no-print" id="lightbox" aria-label="Ảnh">
+    <button class="lb-close" id="lbClose" type="button" aria-label="Đóng">×</button>
+    <button class="lb-nav lb-prev" id="lbPrev" type="button" aria-label="Ảnh trước">‹</button>
+    <figure class="lb-figure">
+      <img id="lbImg" alt="">
+      <figcaption id="lbCap"></figcaption>
+    </figure>
+    <button class="lb-nav lb-next" id="lbNext" type="button" aria-label="Ảnh sau">›</button>
+  </dialog>
+
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

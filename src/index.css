@@ -1902,6 +1902,37 @@ textarea {
   color: #181311;
 }
 
+/* Nút "Xem Trang Cá Nhân" (liên kết tới trang riêng của thành viên, ví dụ /van/) */
+a.hof-profile-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #F59E0B;
+  background-color: #F59E0B;
+  color: #181311;
+  font-weight: 800;
+  font-size: 0.84rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+a.hof-profile-btn:hover {
+  background-color: #FDE68A;
+  border-color: #FDE68A;
+}
+
+a.hof-profile-btn:focus-visible {
+  outline: 3px solid #FDE68A;
+  outline-offset: 2px;
+}
+
 /* =========================================================
    SECTION 5: DIRECTORY 8 LISTS (91 TOP + 429 ALL)
 ========================================================= */

@@ -1132,6 +1132,12 @@ export function App() {
                       <span>Xem Hồ Sơ Di Sản Đầy Đủ</span>
                       <ChevronRight size={15} />
                     </button>
+                    {member.profileUrl && (
+                      <a className="hof-profile-btn" href={member.profileUrl}>
+                        <span>Xem Trang Cá Nhân</span>
+                        <ChevronRight size={15} />
+                      </a>
+                    )}
                   </div>
                 </article>
               ))}
@@ -2252,6 +2258,12 @@ export function App() {
                 </li>
               ))}
             </ul>
+            {selectedHofMember.profileUrl && (
+              <a className="hof-profile-btn" href={selectedHofMember.profileUrl}>
+                <span>Xem Trang Cá Nhân của {selectedHofMember.name}</span>
+                <ChevronRight size={15} />
+              </a>
+            )}
           </div>
         </div>
       )}

@@ -21,6 +21,8 @@ export interface HallOfFameMember {
   achievements: string[];
   quote: string;
   image: string;
+  /** Trang cá nhân riêng (nếu có), ví dụ '/van/' — hiện nút "Xem Trang Cá Nhân" trên thẻ. */
+  profileUrl?: string;
 }
 
 export interface DirectoryPerson {
@@ -378,6 +380,7 @@ export const HALL_OF_FAME_2026: HallOfFameMember[] = [
     quote:
       'Mỗi bài quyền trên thảm đấu thế giới là một lần chúng tôi kể câu chuyện về sự kiên định, uyển chuyển và ý chí thép của con người Việt Nam.',
     image: '/images/chau-tuyet-van-portrait.jpg',
+    profileUrl: '/van/',
   },
   {
     id: 'hof-international-friends',
