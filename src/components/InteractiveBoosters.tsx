@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Award, Calculator, CheckCircle2, Flame, ShieldCheck, Sparkles, Trophy, ArrowRight } from 'lucide-react';
 import './DetailCalcLink.css';
+import { tinhDiem, hangTheoDiem } from '../lib/diem036.js';
+import type { DauVao, DauVaoHeA, DauVaoHeB } from '../lib/diem036.js';
 
 export interface CalculatorTransferPayload {
   branch: 'nomination_a' | 'nomination_b';
@@ -8,6 +10,8 @@ export interface CalculatorTransferPayload {
   totalScore: number;
   rankLabel: string;
   summaryText: string;
+  /** Các lựa chọn chấm điểm, gửi kèm hồ sơ để máy chủ tự tính lại điểm. */
+  detail: DauVao;
 }
 
 interface InteractiveBoostersProps {
@@ -122,22 +126,43 @@ export const InteractiveBoosters: React.FC<InteractiveBoostersProps> = ({ onAppl
   const [visitorStartYear, setVisitorStartYear] = useState<number>(2010);
   const [visitorDan, setVisitorDan] = useState<string>('4 Đẳng Huyền Đai VTF');
 
-  // --- COMPUTE SCORES ---
-  const aAxis3Score = aYears >= 15 ? 15 : aYears >= 10 ? 10 : 5;
-  const aAxis4Score = Math.min(15, aAxis4Training + aAxis4Management);
-  const totalScoreA = Math.min(100, aAxis1Medal + aAxis2Accumulated + aAxis3Score + aAxis4Score);
+  // --- COMPUTE SCORES (công thức dùng chung với máy chủ nhận hồ sơ: src/lib/diem036.js) ---
+  const detailA: DauVaoHeA = {
+    he: 'A',
+    medal: aAxis1Medal,
+    accumulated: aAxis2Accumulated,
+    years: aYears,
+    training: aAxis4Training,
+    management: aAxis4Management,
+  };
+  const detailB: DauVaoHeB = {
+    he: 'B',
+    years: bYears,
+    club: bAxis2Club,
+    system: bAxis2System,
+    athletes: bAxis3Athletes,
+    coaches: bAxis3Coaches,
+    role1: bRole1,
+    role2: bRole2,
+  };
+  const resultA = tinhDiem(detailA);
+  const resultB = tinhDiem(detailB);
+  const aAxis3Score = resultA.truc[2];
+  const aAxis4Score = resultA.truc[3];
+  const totalScoreA = resultA.tong;
 
-  const bAxis1Score = bYears >= 30 ? 30 : bYears >= 20 ? 25 : bYears >= 10 ? 15 : 10;
-  const bAxis2Score = Math.min(30, bAxis2Club + bAxis2System);
-  const bAxis3Score = Math.min(20, bAxis3Athletes + bAxis3Coaches);
-  const bAxis4Score = Math.min(20, bRole1 + bRole2);
-  const totalScoreB = Math.min(100, bAxis1Score + bAxis2Score + bAxis3Score + bAxis4Score);
+  const bAxis1Score = resultB.truc[0];
+  const bAxis2Score = resultB.truc[1];
+  const bAxis3Score = resultB.truc[2];
+  const bAxis4Score = resultB.truc[3];
+  const totalScoreB = resultB.tong;
 
   const activeTotalScore = branch === 'A' ? totalScoreA : totalScoreB;
   const activeYears = branch === 'A' ? aYears : bYears;
 
   const getRankInfo = (score: number) => {
-    if (score >= 90) {
+    const hangMa = hangTheoDiem(score).ma;
+    if (hangMa === 'dac-biet') {
       return {
         title: 'HẠNG ĐẶC BIỆT (90 – 100 điểm)',
         badgeColor: 'rank-special',
@@ -145,7 +170,7 @@ export const InteractiveBoosters: React.FC<InteractiveBoostersProps> = ({ onAppl
         medalShape: 'Kỷ niệm chương Bát Giác Vàng 30 Năm & Đề cử Đại sảnh Danh vọng',
       };
     }
-    if (score >= 75) {
+    if (hangMa === 'xuat-sac') {
       return {
         title: 'HẠNG XUẤT SẮC (75 – 89 điểm)',
         badgeColor: 'rank-excellent',
@@ -153,7 +178,7 @@ export const InteractiveBoosters: React.FC<InteractiveBoostersProps> = ({ onAppl
         medalShape: 'Kỷ niệm chương Hình Thoi Vinh Danh Xuất Sắc 20–30 Năm',
       };
     }
-    if (score >= 60) {
+    if (hangMa === 'tieu-bieu') {
       return {
         title: 'HẠNG TIÊU BIỂU (60 – 74 điểm)',
         badgeColor: 'rank-typical',
@@ -161,7 +186,7 @@ export const InteractiveBoosters: React.FC<InteractiveBoostersProps> = ({ onAppl
         medalShape: 'Kỷ niệm chương Hình Giọt Nước Tri Ân Cống Hiến',
       };
     }
-    if (score >= 50) {
+    if (hangMa === 'ghi-nhan') {
       return {
         title: 'HẠNG GHI NHẬN (50 – 59 điểm)',
         badgeColor: 'rank-recognized',
@@ -191,6 +216,7 @@ export const InteractiveBoosters: React.FC<InteractiveBoostersProps> = ({ onAppl
       totalScore: activeTotalScore,
       rankLabel: currentRank.title,
       summaryText,
+      detail: branch === 'A' ? detailA : detailB,
     });
   };
 

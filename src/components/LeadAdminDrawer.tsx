@@ -1,12 +1,11 @@
 import React from 'react';
-import { Download, RotateCcw, Trash2, X, FileSpreadsheet, ShieldCheck } from 'lucide-react';
+import { Download, Trash2, X, FileSpreadsheet, ShieldCheck } from 'lucide-react';
 import { SubmissionRecord } from '../data/landingData';
 
 interface LeadAdminDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   submissions: SubmissionRecord[];
-  onResetSampleData: () => void;
   onClearAll: () => void;
 }
 
@@ -14,7 +13,6 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
   isOpen,
   onClose,
   submissions,
-  onResetSampleData,
   onClearAll,
 }) => {
   if (!isOpen) return null;
@@ -34,7 +32,7 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
       'Nội Dung Thành Tích / Tư Liệu Kỷ Yếu',
       'Link Kho Ảnh 5-10 Ảnh Gốc (CV 128/VTF-VP)',
       'Chú Thích Ảnh Lịch Sử',
-      'Mã Chữ Ký Xác Thực Server VTF',
+      'Mã Biên Nhận',
     ];
 
     const rows = submissions.map((s) => [
@@ -51,7 +49,7 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
       `"${s.messageOrAchievement.replace(/"/g, '""')}"`,
       `"${(s.photoAlbumUrl || '').replace(/"/g, '""')}"`,
       `"${(s.photoCaptions || '').replace(/"/g, '""')}"`,
-      `"${(s.serverReceiptHash || 'LOCAL-VERIFIED').replace(/"/g, '""')}"`,
+      `"${(s.serverSynced && s.serverReceiptHash ? s.serverReceiptHash : 'CHUA-XAC-NHAN').replace(/"/g, '""')}"`,
     ]);
 
     const csvContent =
@@ -73,9 +71,9 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
         <div className="drawer-header">
           <div>
             <span className="eyebrow-pill">
-              <ShieldCheck size={14} /> HỆ THỐNG LƯU TRỮ LOCALSTORAGE · VTF 30 NĂM
+              <ShieldCheck size={14} /> LƯU TRONG TRÌNH DUYỆT CỦA ANH/CHỊ · VTF 30 NĂM
             </span>
-            <h3>Quản Trị Hồ Sơ Vinh Danh (038/TB-VTF) & Tư Liệu Kỷ Yếu (CV 128)</h3>
+            <h3>Hồ Sơ Đã Gửi Từ Máy Này (038/TB-VTF & CV 128)</h3>
           </div>
           <button type="button" className="btn-icon-close" onClick={onClose} aria-label="Đóng cửa sổ quản trị">
             <X size={20} />
@@ -84,14 +82,11 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
 
         <div className="drawer-toolbar">
           <div className="drawer-count">
-            Tổng số hồ sơ đã ghi nhận: <strong>{submissions.length} hồ sơ</strong>
+            Hồ sơ đã gửi từ máy này: <strong>{submissions.length} hồ sơ</strong>
           </div>
           <div className="drawer-actions">
-            <button type="button" className="btn-outline-sm" onClick={onResetSampleData}>
-              <RotateCcw size={15} /> Nạp lại mẫu chuẩn VTF
-            </button>
             <button type="button" className="btn-outline-sm danger" onClick={onClearAll}>
-              <Trash2 size={15} /> Xóa trống
+              <Trash2 size={15} /> Xóa danh sách trên máy này
             </button>
             <button
               type="button"
@@ -108,8 +103,8 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
           {submissions.length === 0 ? (
             <div className="empty-drawer-state">
               <FileSpreadsheet size={40} />
-              <h4>Chưa có hồ sơ nào trong bộ nhớ</h4>
-              <p>Hãy bấm "Nạp lại mẫu chuẩn VTF" hoặc điền biểu mẫu đề cử trên trang để kiểm thử.</p>
+              <h4>Chưa có hồ sơ nào được gửi từ máy này</h4>
+              <p>Danh sách chỉ gồm hồ sơ do chính trình duyệt này đã gửi thành công, không hiển thị hồ sơ của người khác.</p>
             </div>
           ) : (
             <div className="submissions-list">
@@ -142,9 +137,13 @@ export const LeadAdminDrawer: React.FC<LeadAdminDrawerProps> = ({
                         {item.photoCaptions ? ` — (${item.photoCaptions})` : ''}
                       </p>
                     )}
-                    {item.serverReceiptHash && (
+                    {item.serverSynced && item.serverReceiptHash ? (
                       <p className="sub-contact" style={{ marginTop: '4px', fontSize: '0.78rem', opacity: 0.85 }}>
-                        🔒 Chữ ký xác thực Cổng VTF: <strong>{item.serverReceiptHash}</strong>
+                        🔒 Mã biên nhận của hệ thống VTF: <strong>{item.serverReceiptHash}</strong>
+                      </p>
+                    ) : (
+                      <p className="sub-contact" style={{ marginTop: '4px', fontSize: '0.82rem', color: '#B91C1C' }}>
+                        ⚠ Hồ sơ này CHƯA được hệ thống VTF xác nhận đã nhận. Xin gửi lại bằng biểu mẫu trên trang.
                       </p>
                     )}
                   </div>

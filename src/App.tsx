@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Award,
   BookOpen,
@@ -40,7 +40,6 @@ import {
   YEARBOOK_STRUCTURE,
   GALLERY_PHOTOS,
   FAQ_ITEMS,
-  INITIAL_SUBMISSIONS,
   SubmissionRecord,
   HallOfFameMember,
   GalleryPhoto,
@@ -52,10 +51,15 @@ import {
   VtfListGroupId,
 } from './data/vtf8ListsData';
 import { InteractiveBoosters, CalculatorTransferPayload } from './components/InteractiveBoosters';
+import type { DauVao } from './lib/diem036.js';
 import { LeadAdminDrawer } from './components/LeadAdminDrawer';
 import { KateLinhChatbot } from './components/KateLinhChatbot';
 
 const STORAGE_KEY = 'vtf_30nam_submissions_v1';
+// Hồ sơ mẫu của các phiên bản trang cũ: xóa khỏi bộ nhớ trình duyệt của khách đã mở trang trước đây.
+const SAMPLE_IDS = new Set(['sub-001', 'sub-002', 'sub-003']);
+const SUBMIT_FALLBACK_ERROR =
+  'Hệ thống chưa lưu được hồ sơ của anh/chị. Thông tin đã nhập vẫn còn trên màn hình, anh/chị vui lòng bấm gửi lại sau ít phút. Nếu vẫn lỗi, xin liên hệ Văn phòng VTF qua Zalo/điện thoại 0909 576 776.';
 
 interface HeroSlide {
   id: string;
@@ -154,19 +158,20 @@ export function App() {
   const [openFaqIndex, setOpenFaqIndex] = useState<number>(0);
 
   // Submissions localStorage state & Admin Drawer
+  // Chỉ gồm hồ sơ do CHÍNH trình duyệt này đã gửi (không còn hồ sơ mẫu, không đọc hồ sơ của người khác).
   const [submissions, setSubmissions] = useState<SubmissionRecord[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved) as SubmissionRecord[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.filter((item) => item && typeof item.id === 'string' && !SAMPLE_IDS.has(item.id));
         }
       }
     } catch {
       // ignore storage errors
     }
-    return INITIAL_SUBMISSIONS;
+    return [];
   });
   const [isAdminDrawerOpen, setIsAdminDrawerOpen] = useState<boolean>(false);
 
@@ -186,6 +191,11 @@ export function App() {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formStatus, setFormStatus] = useState<'idle' | 'submitting' | 'error' | 'success'>('idle');
   const [latestCertificate, setLatestCertificate] = useState<SubmissionRecord | null>(null);
+  const [scoreDetail, setScoreDetail] = useState<DauVao | undefined>(undefined);
+  const [submitError, setSubmitError] = useState<string>('');
+  const [honeypot, setHoneypot] = useState<string>('');
+  // Mã yêu cầu giữ nguyên khi gửi lại cùng nội dung (máy chủ dùng để không ghi trùng); đổi khi nội dung đổi.
+  const requestRef = useRef<{ id: string; dauVan: string }>({ id: '', dauVan: '' });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', themeMode);
@@ -198,27 +208,6 @@ export function App() {
       // ignore storage errors
     }
   }, [submissions]);
-
-  // Synchronize recent cloud submissions from Vercel Serverless API (/api/submit-nomination)
-  useEffect(() => {
-    let active = true;
-    fetch('/api/submit-nomination')
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (!active || !data?.ok || !Array.isArray(data.submissions) || data.submissions.length === 0) return;
-        setSubmissions((prev) => {
-          const existingIds = new Set(prev.map((item) => item.id));
-          const incoming = (data.submissions as SubmissionRecord[]).filter((item) => item?.id && !existingIds.has(item.id));
-          return incoming.length > 0 ? [...incoming, ...prev] : prev;
-        });
-      })
-      .catch(() => {
-        // Ignore if running in static preview without serverless runtime
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const scrollToSection = (sectionId: string) => {
     setMobileMenuOpen(false);
@@ -270,9 +259,19 @@ export function App() {
     setYearsContributed(payload.years);
     setEstimatedScore(payload.totalScore);
     setEstimatedRank(payload.rankLabel);
+    setScoreDetail(payload.detail);
+    setSubmitError('');
     setMessageOrAchievement(payload.summaryText);
     scrollToSection('portal-register');
   };
+
+  // Điểm tự chấm chỉ có giá trị khi hạng mục đang chọn đúng hệ đã chấm (Hệ A với đề cử Hệ A, Hệ B với đề cử Hệ B).
+  const scoreMatchesType =
+    scoreDetail !== undefined &&
+    ((submissionType === 'nomination_a' && scoreDetail.he === 'A') ||
+      (submissionType === 'nomination_b' && scoreDetail.he === 'B'));
+  const scoreMismatch =
+    scoreDetail !== undefined && (submissionType === 'nomination_a' || submissionType === 'nomination_b') && !scoreMatchesType;
 
   const validateForm = (): boolean => {
     const errs: Record<string, string> = {};
@@ -304,64 +303,134 @@ export function App() {
     return Object.keys(errs).length === 0;
   };
 
+  const taoMaYeuCau = (): string => {
+    try {
+      if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID().replace(/-/g, '');
+      }
+    } catch {
+      // dùng cách dự phòng bên dưới
+    }
+    return Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  };
+
+  const dinhDangGio = (iso?: string): string => {
+    const d = iso ? new Date(iso) : new Date();
+    const hopLe = Number.isNaN(d.getTime()) ? new Date() : d;
+    return new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+      .format(hopLe)
+      .replace(',', '');
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formStatus === 'submitting') return;
+    setSubmitError('');
     if (!validateForm()) {
       setFormStatus('error');
       return;
     }
 
     setFormStatus('submitting');
-    const now = new Date();
-    const pad = (n: number) => String(n).padStart(2, '0');
-    const timestamp = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(
-      now.getHours()
-    )}:${pad(now.getMinutes())}`;
-    const generatedId = `VTF30-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    const baseRecord: SubmissionRecord = {
-      id: generatedId,
-      createdAt: timestamp,
+    const kemDiem = scoreMatchesType;
+    const payload = {
       fullName: fullName.trim(),
       phone: phone.trim(),
       email: email.trim(),
       organization: organization.trim(),
       submissionType,
-      submissionTypeLabel: SUBMISSION_TYPE_LABELS[submissionType],
       yearsContributed: Number(yearsContributed) || 5,
-      estimatedScore,
-      estimatedRank,
+      estimatedScore: kemDiem ? estimatedScore : undefined,
+      estimatedRank: kemDiem ? estimatedRank : undefined,
+      scoreDetail: kemDiem ? scoreDetail : undefined,
       messageOrAchievement: messageOrAchievement.trim(),
       photoAlbumUrl: photoAlbumUrl.trim() || undefined,
       photoCaptions: photoCaptions.trim() || undefined,
       consentAccepted,
+      ghi_chu_noi_bo_vtf: honeypot,
     };
-
-    try {
-      const res = await fetch('/api/submit-nomination', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(baseRecord),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.ok) {
-          baseRecord.serverReceiptHash = data.serverReceiptHash;
-          baseRecord.serverSynced = true;
-        }
-      }
-    } catch {
-      // Fallback gracefully if offline
+    // Cùng nội dung thì giữ mã yêu cầu cũ (gửi lại không bị ghi trùng); nội dung đổi thì mã mới.
+    const dauVan = JSON.stringify(payload);
+    if (!requestRef.current.id || requestRef.current.dauVan !== dauVan) {
+      requestRef.current = { id: taoMaYeuCau(), dauVan };
     }
 
-    setSubmissions((prev) => [baseRecord, ...prev]);
-    setLatestCertificate(baseRecord);
-    setFormStatus('success');
-    setFormErrors({});
-  };
+    try {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), 35000);
+      let res: Response;
+      try {
+        res = await fetch('/api/submit-nomination', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...payload, requestId: requestRef.current.id }),
+          signal: controller.signal,
+        });
+      } finally {
+        window.clearTimeout(timer);
+      }
+      let data: { ok?: boolean; id?: string; serverReceiptHash?: string; savedAt?: string; thongBao?: string; loi?: string[] } | null = null;
+      try {
+        data = await res.json();
+      } catch {
+        data = null;
+      }
 
-  const handleResetSampleData = () => {
-    setSubmissions(INITIAL_SUBMISSIONS);
+      // Chỉ báo thành công khi máy chủ xác nhận đã ghi vào hệ thống tiếp nhận.
+      if (res.ok && data?.ok && data.id) {
+        const record: SubmissionRecord = {
+          id: data.id,
+          createdAt: dinhDangGio(data.savedAt),
+          fullName: payload.fullName,
+          phone: payload.phone,
+          email: payload.email,
+          organization: payload.organization,
+          submissionType,
+          submissionTypeLabel: SUBMISSION_TYPE_LABELS[submissionType],
+          yearsContributed: payload.yearsContributed,
+          estimatedScore: payload.estimatedScore,
+          estimatedRank: payload.estimatedRank,
+          messageOrAchievement: payload.messageOrAchievement,
+          photoAlbumUrl: payload.photoAlbumUrl,
+          photoCaptions: payload.photoCaptions,
+          consentAccepted,
+          serverReceiptHash: data.serverReceiptHash,
+          serverSynced: true,
+        };
+        setSubmissions((prev) => [record, ...prev.filter((item) => item.id !== record.id)]);
+        setLatestCertificate(record);
+        setFormStatus('success');
+        setFormErrors({});
+        // Xóa biểu mẫu để khỏi vô tình gửi trùng; hồ sơ vừa gửi nằm trong Giấy tiếp nhận và danh sách trên máy này.
+        requestRef.current = { id: '', dauVan: '' };
+        setFullName('');
+        setPhone('');
+        setEmail('');
+        setOrganization('');
+        setMessageOrAchievement('');
+        setPhotoAlbumUrl('');
+        setPhotoCaptions('');
+        setEstimatedScore(undefined);
+        setEstimatedRank(undefined);
+        setScoreDetail(undefined);
+        return;
+      }
+
+      const chiTiet = Array.isArray(data?.loi) && data.loi.length > 0 ? ` ${data.loi.join(' ')}` : '';
+      setSubmitError(typeof data?.thongBao === 'string' && data.thongBao ? data.thongBao + chiTiet : SUBMIT_FALLBACK_ERROR);
+      setFormStatus('error');
+    } catch {
+      setSubmitError(SUBMIT_FALLBACK_ERROR);
+      setFormStatus('error');
+    }
   };
 
   const handleClearAllSubmissions = () => {
@@ -1782,12 +1851,34 @@ export function App() {
                   </p>
                 </div>
 
-                {estimatedScore !== undefined && (
+                {scoreMismatch && (
+                  <div className="form-error-alert" role="alert">
+                    <AlertCircle size={18} />
+                    <div>
+                      <strong>Điểm tự chấm đang đồng bộ thuộc Hệ {scoreDetail?.he} nên không áp dụng cho hạng mục đang chọn.</strong>
+                      <span>
+                        Hãy chọn lại hạng mục "Đề cử Hệ {scoreDetail?.he}" hoặc chấm lại điểm theo đúng hệ. Nếu giữ nguyên, hồ sơ vẫn gửi được nhưng sẽ không kèm điểm.
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {scoreMatchesType && estimatedScore !== undefined && (
                   <div className="prefilled-score-banner">
                     <Award size={20} />
                     <div>
                       <strong>Đã đồng bộ điểm tự chấm từ Công cụ 036/VTF: {estimatedScore}/100 điểm</strong>
                       <span>Xếp hạng dự kiến: {estimatedRank}</span>
+                    </div>
+                  </div>
+                )}
+
+                {submitError && (
+                  <div className="form-error-alert" role="alert">
+                    <AlertCircle size={18} />
+                    <div>
+                      <strong>Hồ sơ CHƯA được gửi đi.</strong>
+                      <span>{submitError}</span>
                     </div>
                   </div>
                 )}
@@ -1986,6 +2077,23 @@ export function App() {
                     )}
                   </div>
 
+                  {/* Ô bẫy chống tự động gửi rác: người thật không thấy và không điền */}
+                  <div
+                    aria-hidden="true"
+                    style={{ position: 'absolute', left: '-10000px', top: 'auto', width: '1px', height: '1px', overflow: 'hidden' }}
+                  >
+                    <label htmlFor="vtf-hp">Để trống</label>
+                    <input
+                      id="vtf-hp"
+                      name="ghi_chu_noi_bo_vtf"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={honeypot}
+                      onChange={(e) => setHoneypot(e.target.value)}
+                    />
+                  </div>
+
                   <div className="form-submit-row">
                     <button
                       type="submit"
@@ -2011,7 +2119,7 @@ export function App() {
                       onClick={() => setIsAdminDrawerOpen(true)}
                     >
                       <Layers size={16} />
-                      <span>Xem danh sách hồ sơ đã nộp ({submissions.length})</span>
+                      <span>Hồ sơ đã gửi từ máy này ({submissions.length})</span>
                     </button>
                   </div>
                 </form>
@@ -2373,7 +2481,7 @@ export function App() {
               )}
               {latestCertificate.serverReceiptHash && (
                 <div>
-                  <span>Chữ ký xác thực Server VTF:</span>
+                  <span>Mã biên nhận:</span>
                   <strong>{latestCertificate.serverReceiptHash}</strong>
                 </div>
               )}
@@ -2386,9 +2494,9 @@ export function App() {
             </div>
 
             <p className="cert-note">
-              Hồ sơ đã được ghi nhận vào <strong>Cổng Tiếp Nhận Trực Tuyến VTF (`/api/submit-nomination`)</strong> và
-              lưu bản sao quản trị. Quý vị có thể bấm nút bên dưới để gửi đồng thời bản xác nhận qua Email tới Văn
-              phòng VTF (<strong>tkdvn1996@gmail.com</strong> – Bà Nguyễn Thị Anh Thư) hoặc xuất file Excel (.CSV).
+              Hồ sơ đã được ghi nhận vào <strong>hệ thống tiếp nhận của Tiểu ban Nhân sự & Khen thưởng VTF</strong>. Xin
+              lưu lại mã hồ sơ và mã biên nhận ở trên. Quý vị có thể bấm nút bên dưới để gửi thêm bản xác nhận qua Email
+              tới Văn phòng VTF (<strong>tkdvn1996@gmail.com</strong> – Bà Nguyễn Thị Anh Thư).
             </p>
 
             <div className="cert-actions" style={{ flexWrap: 'wrap', gap: '10px' }}>
@@ -2429,7 +2537,7 @@ export function App() {
                   setIsAdminDrawerOpen(true);
                 }}
               >
-                <span>Mở Kho Hồ Sơ & Xuất File CSV</span>
+                <span>Xem hồ sơ đã gửi từ máy này</span>
               </button>
               <button type="button" className="btn-secondary-outline" onClick={() => setFormStatus('idle')}>
                 <span>Đóng Cửa Sổ</span>
@@ -2709,13 +2817,12 @@ export function App() {
       )}
 
       {/* =========================================================
-          ADMIN DRAWER (LOCALSTORAGE + CSV EXPORT)
+          DANH SÁCH HỒ SƠ ĐÃ GỬI TỪ MÁY NÀY (LOCALSTORAGE + CSV)
       ========================================================= */}
       <LeadAdminDrawer
         isOpen={isAdminDrawerOpen}
         onClose={() => setIsAdminDrawerOpen(false)}
         submissions={submissions}
-        onResetSampleData={handleResetSampleData}
         onClearAll={handleClearAllSubmissions}
       />
 
