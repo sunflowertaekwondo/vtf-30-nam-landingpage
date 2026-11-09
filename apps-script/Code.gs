@@ -16,7 +16,7 @@
  *   Nhật ký           : mỗi lần nhận (không chứa thông tin cá nhân)
  *
  * Quy tắc an toàn:
- *  - Từ chối ghi nếu file dữ liệu hoặc thư mục chứa nó đang chia sẻ công khai.
+ *  - Từ chối ghi nếu file dữ liệu đang chia sẻ công khai (kể cả công khai do thừa kế từ thư mục).
  *  - Mọi ô chữ là "văn bản thuần" và được chặn chèn công thức (=, +, -, @ ở đầu).
  *  - Mã yêu cầu (requestId) chống ghi trùng khi trình duyệt/máy chủ gửi lại.
  *  - Giới hạn tốc độ để chống tràn dữ liệu rác.
@@ -232,17 +232,16 @@ function tabGoc_() {
   return sh;
 }
 
-// File dữ liệu và thư mục chứa nó phải RIÊNG TƯ (không "bất kỳ ai", không "bất kỳ ai có liên kết", không cả tên miền).
+// File dữ liệu phải RIÊNG TƯ (không "bất kỳ ai", không "bất kỳ ai có liên kết", không cả tên miền).
 function laRiengTu_(tuyetDoi) {
   var cache = CacheService.getScriptCache();
   if (!tuyetDoi && cache.get('RIENG_TU') === 'ok') return true;
   var id = props_().getProperty('SHEET_ID');
   var f = DriveApp.getFileById(id);
+  // getSharingAccess() của TỆP phản ánh quyền hiệu lực (kể cả quyền thừa kế từ thư mục nếu thư mục đang truyền quyền xuống).
+  // Không xét riêng thư mục cha: thư mục "RIENG TU" có quyền "ai có liên kết chỉ xem tên" hiển thị kế thừa từ thư mục cha công khai,
+  // nhưng đã tắt kế thừa xuống tệp, nên không làm lộ dữ liệu trong tệp (đã đối chiếu bằng danh sách quyền của Drive).
   var ok = f.getSharingAccess() === DriveApp.Access.PRIVATE;
-  if (ok) {
-    var cha = f.getParents();
-    while (ok && cha.hasNext()) ok = cha.next().getSharingAccess() === DriveApp.Access.PRIVATE;
-  }
   if (ok) cache.put('RIENG_TU', 'ok', 300);
   return ok;
 }

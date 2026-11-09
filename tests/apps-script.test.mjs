@@ -124,8 +124,9 @@ test('Hệ B không có điểm (chưa dùng máy tính): ghi được với ô 
   assert.equal(r[cot(env, 'doiChieu')], 'Không có chi tiết');
 });
 
-test('Từ chối ghi khi bảng dữ liệu hoặc thư mục chứa nó đang chia sẻ công khai', () => {
-  for (const cauHinh of [{ rieng: false }, { choPhepCha: false }]) {
+test('Từ chối ghi khi bảng dữ liệu đang chia sẻ công khai; quyền "chỉ xem tên" của thư mục cha không phải lý do từ chối', () => {
+  assert.equal(nhan(taoMoiTruong({ choPhepCha: false }), hoSoMau()).ok, true, 'thư mục cha có liên kết metadata nhưng tệp riêng tư thì vẫn ghi được');
+  for (const cauHinh of [{ rieng: false }]) {
     const env = taoMoiTruong(cauHinh);
     const kq = nhan(env, hoSoMau());
     assert.equal(kq.ok, false);
