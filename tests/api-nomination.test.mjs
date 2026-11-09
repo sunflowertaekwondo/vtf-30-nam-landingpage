@@ -11,9 +11,9 @@ function fakeRes() {
   const r = { code: 200, headers: {}, body: null, setHeader(k, v) { r.headers[k.toLowerCase()] = v; }, status(c) { r.code = c; return r; }, json(o) { r.body = o; return r; }, end() { return r; } };
   return r;
 }
-async function goi(handler, { method = 'POST', body, ipAddr } = {}) {
+async function goi(handler, { method = 'POST', body, ipAddr, loaiNoiDung = 'application/json' } = {}) {
   const res = fakeRes();
-  await handler({ method, body, headers: { 'x-forwarded-for': ipAddr || ip() }, socket: { remoteAddress: '1.1.1.1' } }, res);
+  await handler({ method, body, headers: { 'x-forwarded-for': ipAddr || ip(), 'content-type': loaiNoiDung }, socket: { remoteAddress: '1.1.1.1' } }, res);
   return res;
 }
 const phanHoi = (obj, status = 200) => ({ status, text: async () => (typeof obj === 'string' ? obj : JSON.stringify(obj)) });
@@ -246,4 +246,37 @@ test('chuanSdt', () => {
   assert.equal(chuanSdt('+84 912 345 678'), '0912345678');
   assert.equal(chuanSdt('0912.345.678'), '0912345678');
   for (const x of ['', '123', '1912345678', '09123456789012', 'abc', null, undefined, '+8591234567']) assert.equal(chuanSdt(x), null, String(x));
+});
+
+test('Chỉ nhận application/json: form và text/plain (gửi chéo trang) bị từ chối 415, không gọi Sheet', async () => {
+  for (const loaiNoiDung of ['text/plain', 'application/x-www-form-urlencoded', 'multipart/form-data', '']) {
+    const s = sheetGia(dongY);
+    const r = await goi(taoHandler(s), { body: JSON.stringify(hoSo()), loaiNoiDung });
+    assert.equal(r.code, 415, loaiNoiDung);
+    assert.equal(r.body.ok, false);
+    assert.equal(s.goiDen.length, 0);
+  }
+  const s = sheetGia(dongY);
+  assert.equal((await goi(taoHandler(s), { body: hoSo(), loaiNoiDung: 'application/json; charset=utf-8' })).code, 200);
+});
+
+test('Địa chỉ Apps Script dạng Workspace /a/macros/<tên miền>/s/... cũng hợp lệ', () => {
+  assert.equal(diaChiHopLe('https://script.google.com/a/macros/vtf.org.vn/s/AKfycbzTEST_0123456789abcdefghij/exec'), true);
+  assert.equal(diaChiHopLe('https://script.google.com/a/macros/evil.example/../s/AKfycbzTEST_0123456789abcdefghij/exec'), false);
+});
+
+test('Mã yêu cầu bắt đầu bằng dấu gạch bị từ chối (khớp quy tắc của Apps Script)', async () => {
+  const s = sheetGia(dongY);
+  const r = await goi(taoHandler(s), { body: hoSo({ requestId: '-abcdefghijklmnop1234' }) });
+  assert.equal(r.code, 400);
+});
+
+test('Thử lại tôn trọng ngân sách thời gian: lần đầu chậm rồi lỗi thì không thử lại quá 22 giây tổng', async () => {
+  let t = 0;
+  const goiDen = [];
+  const fetchFn = async () => { goiDen.push(t); t += goiDen.length === 1 ? 19000 : 100; throw new Error('mạng đứt'); };
+  const h = createHandler({ env: { VTF_GOOGLE_SHEET_WEBHOOK: URL_SHEET }, fetchFn, now: () => t });
+  const r = await goi(h, { body: hoSo() });
+  assert.equal(r.code, 502);
+  assert.equal(goiDen.length, 1, 'còn dưới 4 giây ngân sách thì không thử lại');
 });

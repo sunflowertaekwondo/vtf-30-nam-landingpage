@@ -30,7 +30,7 @@ test('Ghi hồ sơ hợp lệ: đúng cột, mã VTF30-0001, SĐT chuẩn hóa, 
   assert.equal(c('bienNhan'), kq.receipt);
   const ct = env.sheets['Tất cả hồ sơ'].formulas;
   for (const k of ['diemXepHang', 'hang', 'sauHan', 'trung', 'khoaXepHang']) assert.ok(ct.get(`2:${cot(env, k) + 1}`)?.startsWith('='), `thiếu công thức ${k}`);
-  assert.match(ct.get(`2:${cot(env, 'diemXepHang') + 1}`), /^=IF\(L2<>"",L2,IF\(K2<>"",K2,""\)\)$/); // không dùng điểm người nộp tự gửi (cột J)
+  assert.match(ct.get(`2:${cot(env, 'diemXepHang') + 1}`), /^=IF\(ISNUMBER\(L2\),L2,IF\(ISNUMBER\(K2\),K2,""\)\)$/); // chỉ nhận số; không dùng điểm người nộp tự gửi (cột J)
   const nk = env.sheets['Nhật ký'].rows;
   assert.equal(nk.length, 1);
   assert.equal(nk[0][1], 'ĐÃ GHI');
@@ -69,8 +69,7 @@ test('Từ chối dữ liệu xấu với đúng mã lỗi và không ghi dòng 
     [{ phone: '123' }, 'sdt'], [{ phone: '1909123456' }, 'sdt'], [{ email: 'khong-phai-email' }, 'email'],
     [{ consent: false }, 'dong_y'], [{ consent: 'true' }, 'dong_y'],
     [{ photoAlbumUrl: 'javascript:alert(1)' }, 'link_anh'], [{ yearsContributed: 99 }, 'so_nam'], [{ yearsContributed: 'abc' }, 'so_nam'],
-    [{ scoreClaimed: 150 }, 'diem'], [{ scoreServer: -1 }, 'diem'], [{ scoreAxes: [1, 2, 3] }, 'truc'], [{ scoreAxes: 'x' }, 'truc'],
-    [{ scoreDetail: { x: 'a'.repeat(700) } }, 'chi_tiet'],
+    [{ scoreClaimed: 150 }, 'diem'], [{ scoreClaimed: 'abc' }, 'diem'], [{ requestId: '-abcdefghijklmnop1234' }, 'ma_yeu_cau'], [{ requestId: '=IMAGE("http://x")aaaaaaaaaaaa' }, 'ma_yeu_cau'],
   ];
   for (const [ghiDe, loi] of cac) {
     const kq = nhan(env, hoSoMau(ghiDe));
@@ -213,6 +212,6 @@ test('Công thức từng dòng tham chiếu đúng cột và đúng dòng', () 
   const L = (k) => env.chay(`cot_("${k}")`) + '7';
   assert.ok(f.diemXepHang.includes(L('diemHoiDong')) && f.diemXepHang.includes(L('diemMayChu')) && !f.diemXepHang.includes(L('diemTuCham')), 'điểm xếp hạng không được lấy điểm người nộp tự gửi');
   assert.ok(f.sauHan.includes(`${L('thoiGian')}>'Tổng quan'!$B$3+1`));
-  assert.ok(f.trung.includes('COUNTIFS('));
+  assert.ok(f.trung.includes('SUMPRODUCT(') && !f.trung.includes('COUNTIFS('), 'so sánh nguyên văn chuỗi, không dùng COUNTIFS');
   assert.equal(f.khoaXepHang, `=IF(${L('diemXepHang')}="",-1,${L('diemXepHang')})`);
 });

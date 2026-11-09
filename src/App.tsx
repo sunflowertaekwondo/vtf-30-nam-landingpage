@@ -55,7 +55,9 @@ import type { DauVao } from './lib/diem036.js';
 import { LeadAdminDrawer } from './components/LeadAdminDrawer';
 import { KateLinhChatbot } from './components/KateLinhChatbot';
 
-const STORAGE_KEY = 'vtf_30nam_submissions_v1';
+const STORAGE_KEY = 'vtf_30nam_submissions_v2';
+// Khóa cũ: hồ sơ lưu ở đây do phiên bản trang trước, khi máy chủ chưa ghi bền vững. Chuyển sang khóa mới và đánh dấu "chưa xác nhận".
+const OLD_STORAGE_KEY = 'vtf_30nam_submissions_v1';
 // Hồ sơ mẫu của các phiên bản trang cũ: xóa khỏi bộ nhớ trình duyệt của khách đã mở trang trước đây.
 const SAMPLE_IDS = new Set(['sub-001', 'sub-002', 'sub-003']);
 const SUBMIT_FALLBACK_ERROR =
@@ -166,6 +168,17 @@ export function App() {
         const parsed = JSON.parse(saved) as SubmissionRecord[];
         if (Array.isArray(parsed)) {
           return parsed.filter((item) => item && typeof item.id === 'string' && !SAMPLE_IDS.has(item.id));
+        }
+      }
+      // Hồ sơ từ phiên bản trước: giữ lại để khách còn thấy mình đã gửi gì, nhưng đánh dấu CHƯA được hệ thống xác nhận.
+      const old = localStorage.getItem(OLD_STORAGE_KEY);
+      if (old) {
+        const parsedOld = JSON.parse(old) as SubmissionRecord[];
+        localStorage.removeItem(OLD_STORAGE_KEY);
+        if (Array.isArray(parsedOld)) {
+          return parsedOld
+            .filter((item) => item && typeof item.id === 'string' && !SAMPLE_IDS.has(item.id))
+            .map((item) => ({ ...item, serverSynced: false }));
         }
       }
     } catch {
@@ -2001,6 +2014,7 @@ export function App() {
                     </label>
                     <textarea
                       id="vtf-achievement"
+                      maxLength={4000}
                       rows={4}
                       value={messageOrAchievement}
                       onChange={(e) => setMessageOrAchievement(e.target.value)}
@@ -2037,6 +2051,7 @@ export function App() {
                       </label>
                       <input
                         id="vtf-photo-captions"
+                        maxLength={600}
                         type="text"
                         value={photoCaptions}
                         onChange={(e) => setPhotoCaptions(e.target.value)}

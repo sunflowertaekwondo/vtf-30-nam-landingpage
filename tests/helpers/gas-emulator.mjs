@@ -72,7 +72,7 @@ export function taoMoiTruong({ rieng = true, choPhepCha = true } = {}) {
         getParents: () => { let da = false; return { hasNext: () => !da, next: () => { da = true; return { getSharingAccess: () => trangThaiDrive.cha }; } }; },
       }),
     },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (t) => sheets[t] || null }) },
+    SpreadsheetApp: { flush() {}, openById: () => ({ getSheetByName: (t) => sheets[t] || null }) },
     Utilities: {
       formatDate: (d, tz, fmt) => {
         const g = new Date(d.getTime() + 7 * 3600 * 1000);

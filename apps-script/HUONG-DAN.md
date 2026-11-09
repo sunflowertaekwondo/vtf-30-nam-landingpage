@@ -44,7 +44,7 @@ Bảng này **riêng tư**. Cho người khác xem bằng cách thêm đích dan
 
 1. Vào https://script.google.com, tạo dự án mới tên `VTF30 - Tiep nhan ho so`, dán toàn bộ `apps-script/Code.gs` vào.
 2. Chọn hàm `thietLap`, bấm Chạy, cho phép các quyền được hỏi. Hàm tạo Google Sheet riêng tư và ghi địa chỉ vào Nhật ký thực thi.
-3. Chọn hàm `kiemThuToanBo`, bấm Chạy. Kết quả phải là `"ketQua": "TẤT CẢ ĐẠT"`. Hàm ghi vài hồ sơ thử rồi tự xóa.
+3. Chọn hàm `kiemThuToanBo`, bấm Chạy. Kết quả phải là `"ketQua": "TẤT CẢ ĐẠT"`. Hàm ghi vài hồ sơ thử (tên bắt đầu bằng ZZ-KIEM-THU) rồi tự xóa. **Chỉ chạy khi chưa có hoặc còn rất ít hồ sơ thật** (hàm kiểm tra 20 dòng đầu của các bảng xếp hạng).
 4. Triển khai > Triển khai mới > Loại: Ứng dụng web > Thực thi bằng: **Tôi** > Ai có quyền truy cập: **Bất kỳ ai** > Triển khai. Chép địa chỉ kết thúc bằng `/exec`.
 5. Trên Vercel: dự án `vtf-30-nam-landingpage` > Settings > Environment Variables > thêm `VTF_GOOGLE_SHEET_WEBHOOK` = địa chỉ `/exec` (môi trường Production) > Redeploy.
 6. Kiểm tra sức khỏe: mở `<địa chỉ /exec>?ping=1` phải thấy `"san_sang":true,"rieng_tu":true`.

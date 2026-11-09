@@ -62,7 +62,7 @@ export function chuanHoaHoSo(body, taoMa) {
   if (soNam < 0 || soNam > 80) loi.push('Số năm hoạt động không hợp lệ.');
 
   let requestId = typeof body.requestId === 'string' ? body.requestId.trim() : '';
-  if (requestId && !/^[A-Za-z0-9_-]{16,80}$/.test(requestId)) loi.push('Mã yêu cầu không hợp lệ.');
+  if (requestId && !/^[A-Za-z0-9][A-Za-z0-9_-]{15,79}$/.test(requestId)) loi.push('Mã yêu cầu không hợp lệ.');
   if (!requestId) requestId = taoMa();
 
   if (loi.length) return { ok: false, loi };

