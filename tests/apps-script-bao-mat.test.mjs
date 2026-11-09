@@ -72,7 +72,7 @@ test('Nhật ký: mã yêu cầu chứa công thức bị từ chối và đư�
   const nk = env.sheets['Nhật ký'].rows;
   assert.equal(nk.length, 1);
   assert.equal(nk[0][3].charAt(0), "'");
-  assert.ok(nk[0][3].length <= 81);
+  assert.ok(nk[0][3].length <= 82);
   for (const cell of nk[0].slice(1)) assert.ok(!/^[=+\-@]/.test(String(cell)), 'ô nhật ký bắt đầu bằng ký tự công thức: ' + cell);
 });
 

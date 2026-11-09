@@ -94,10 +94,11 @@ test('Chặn chèn công thức: ô bắt đầu bằng = + - @ được thêm d
   const kq = nhan(env, hoSoMau({ fullName: '=HYPERLINK("http://x","y")', organization: '-cmd|calc', message: '@SUM(1+1) nội dung dài đủ 15 ký tự', photoCaptions: '+84 ảnh', email: 'a@example.com' }));
   assert.equal(kq.ok, true);
   const r = dong(env, 2);
-  assert.equal(r[cot(env, 'hoTen')], '\'=HYPERLINK("http://x","y")');
-  assert.equal(r[cot(env, 'donVi')], '\'-cmd|calc');
-  assert.equal(r[cot(env, 'tomTat')], '\'@SUM(1+1) nội dung dài đủ 15 ký tự');
-  assert.equal(r[cot(env, 'chuThichAnh')], '\'+84 ảnh');
+  // hai dấu nháy: Google Sheet bỏ dấu nháy đầu, còn lại một dấu nháy trong ô để CSV/Excel không hiểu là công thức
+  assert.equal(r[cot(env, 'hoTen')], '\'\'=HYPERLINK("http://x","y")');
+  assert.equal(r[cot(env, 'donVi')], '\'\'-cmd|calc');
+  assert.equal(r[cot(env, 'tomTat')], '\'\'@SUM(1+1) nội dung dài đủ 15 ký tự');
+  assert.equal(r[cot(env, 'chuThichAnh')], '\'\'+84 ảnh');
   assert.equal(r[cot(env, 'email')], 'a@example.com');
 });
 

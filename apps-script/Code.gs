@@ -113,7 +113,9 @@ function catChuoi_(v, toiDa) {
 // Chặn chèn công thức khi mở bằng Excel/Sheets: ô bắt đầu bằng = + - @ (hoặc tab/CR) được thêm dấu nháy đơn phía trước.
 function anToanO_(s) {
   if (typeof s !== 'string' || s === '') return s;
-  return /^[=+\-@\t\r]/.test(s) ? '\'' + s : s;
+  // Hai dấu nháy: Google Sheet "ăn" dấu nháy đầu (ký hiệu ép kiểu chữ, không lưu lại), dấu nháy thứ hai còn lại trong ô,
+  // nên khi xuất CSV mở bằng Excel ô cũng không bị hiểu là công thức.
+  return /^[=+\-@\t\r]/.test(s) ? '\'\'' + s : s;
 }
 
 function chuanSdt_(v) {
