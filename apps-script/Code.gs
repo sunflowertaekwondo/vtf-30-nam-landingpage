@@ -761,3 +761,10 @@ function kiemThuToanBo() {
   Logger.log(JSON.stringify(kq, null, 1));
   return kq;
 }
+
+// Dọn các hồ sơ thử (họ tên bắt đầu bằng ZZ-KIEM-THU) sau khi kiểm tra từ trang thật; đặt lại bộ đếm mã hồ sơ cho khớp.
+function donHoSoThu() {
+  var n = xoaBanGhiThu_();
+  Logger.log('Đã xóa ' + n + ' hồ sơ thử');
+  return n;
+}
