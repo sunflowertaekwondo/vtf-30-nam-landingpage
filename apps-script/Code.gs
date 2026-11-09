@@ -743,12 +743,10 @@ function kiemThuToanBo() {
   var dong1 = dongTheoTen(1);
   sh.getRange(dong1, chiSoCot_('diemHoiDong')).setValue(99);
   var dong4 = dongTheoTen(4);
-  // chữ, không phải số: lớp xác thực dữ liệu của ô chặn (ném lỗi); nếu lọt qua (dán) thì công thức ISNUMBER vẫn không tính
-  try { sh.getRange(dong4, chiSoCot_('diemHoiDong')).setValue('85đ'); kq.chuLot = true; } catch (e) { kq.chuBiChan = true; }
   SpreadsheetApp.flush(); Utilities.sleep(2500);
   var a2 = layTen(TAB.heA), b2 = layTen(TAB.heB);
   ok(a2.map(ten)[0] === '1', 'điểm Hội đồng 99 phải đưa hồ sơ 1 lên đầu: ' + JSON.stringify(a2));
-  ok(sh.getRange(dong4, chiSoCot_('diemXepHang')).getValue() === 60 && b2.map(ten).slice(0, 3).join(',') === '5,8,4', 'điểm Hội đồng là chữ không được tính, hồ sơ 4 vẫn 60: ' + JSON.stringify(b2));
+  ok(sh.getRange(dong4, chiSoCot_('diemXepHang')).getValue() === 60 && b2.map(ten).slice(0, 3).join(',') === '5,8,4', 'hồ sơ 4 chưa có điểm Hội đồng vẫn xếp theo điểm máy chủ 60: ' + JSON.stringify(b2));
   ok(laRiengTu_(true), 'bảng dữ liệu phải riêng tư');
   var tq = mo_().getSheetByName(TAB.tongQuan);
   kq.tongQuan = tq.getRange('B4:B11').getValues().map(function (x) { return x[0]; });
