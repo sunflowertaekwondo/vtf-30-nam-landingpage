@@ -582,7 +582,7 @@ function dungTongQuan_(sh) {
     ['Hồ sơ có điểm LỆCH giữa người nộp và máy chủ', '=COUNTIF(' + dai_('doiChieu') + ',"LỆCH")'],
     ['Hồ sơ nộp sau hạn', '=COUNTIF(' + dai_('sauHan') + ',"Sau hạn")'],
     ['Hồ sơ trùng SĐT và hạng mục', '=COUNTIF(' + dai_('trung') + ',"Trùng*")'],
-    ['Hồ sơ nhận gần nhất', '=IFERROR(MAX(' + dai_('thoiGian') + '),"")']
+    ['Hồ sơ nhận gần nhất', '=IF(COUNT(' + dai_('thoiGian') + ')=0,"",MAX(' + dai_('thoiGian') + '))']
   ];
   sh.getRange(3, 1, hang.length, 2).setValues(hang.map(function (h) { return [h[0], '']; }));
   hang.forEach(function (h, i) { if (String(h[1]).charAt(0) === '=') sh.getRange(3 + i, 2).setFormula(h[1]); else sh.getRange(3 + i, 2).setValue(h[1]); });
