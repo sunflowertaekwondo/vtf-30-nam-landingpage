@@ -743,7 +743,8 @@ function kiemThuToanBo() {
   var dong1 = dongTheoTen(1);
   sh.getRange(dong1, chiSoCot_('diemHoiDong')).setValue(99);
   var dong4 = dongTheoTen(4);
-  sh.getRange(dong4, chiSoCot_('diemHoiDong')).setValue('85đ'); // chữ, không phải số: không được tính
+  // chữ, không phải số: lớp xác thực dữ liệu của ô chặn (ném lỗi); nếu lọt qua (dán) thì công thức ISNUMBER vẫn không tính
+  try { sh.getRange(dong4, chiSoCot_('diemHoiDong')).setValue('85đ'); kq.chuLot = true; } catch (e) { kq.chuBiChan = true; }
   SpreadsheetApp.flush(); Utilities.sleep(2500);
   var a2 = layTen(TAB.heA), b2 = layTen(TAB.heB);
   ok(a2.map(ten)[0] === '1', 'điểm Hội đồng 99 phải đưa hồ sơ 1 lên đầu: ' + JSON.stringify(a2));
