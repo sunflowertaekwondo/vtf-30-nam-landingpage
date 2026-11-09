@@ -432,7 +432,9 @@ function thietLap() {
   }
   if (!p.getProperty('MUOI')) p.setProperty('MUOI', Utilities.getUuid() + Utilities.getUuid());
   ss.setSpreadsheetTimeZone(MUI_GIO);
-  try { ss.setSpreadsheetLocale('vi_VN'); } catch (e) { /* giữ ngôn ngữ mặc định nếu không hỗ trợ */ }
+  // BẮT BUỘC en_US: với ngôn ngữ vi_VN, Sheet đòi dấu chấm phẩy giữa các đối số nên mọi công thức dùng dấu phẩy (cú pháp mà
+  // setFormula gửi vào) bị lỗi #ERROR!. Ngày giờ vẫn hiển thị dd/MM/yyyy nhờ định dạng số riêng của từng cột.
+  ss.setSpreadsheetLocale('en_US');
 
   var goc = taoTab_(ss, TAB.goc);
   var heA = taoTab_(ss, TAB.heA), heB = taoTab_(ss, TAB.heB), khac = taoTab_(ss, TAB.khac);
