@@ -475,6 +475,107 @@
     kids.push(h('div', { class: 'actions' }, acts));
     kids.push(h('p', { id: 'save-msg', class: 'save-msg', role: 'status' }));
     saveBox.appendChild(h('section', { class: 'card save-card' }, kids));
+    saveBox.appendChild(renderGuiBox());
+  }
+
+  /* ---------- Gửi hồ sơ chính thức về Văn phòng VTF (ghi vào Google Sheet riêng tư qua /api/submit-nomination) ---------- */
+  var GUI = { open: false, phone: '', email: '', dongY: false, sending: false, requestId: '', dauVan: '', daGui: null, msg: '', ok: false };
+  function taoMaYeuCau() {
+    try { if (window.crypto && window.crypto.randomUUID) return window.crypto.randomUUID().replace(/-/g, ''); } catch (e) { /* dùng dự phòng */ }
+    var s = ''; for (var i = 0; i < 32; i++) s += Math.floor(Math.random() * 16).toString(16);
+    return s;
+  }
+  function soTruc(kq) {
+    return kq.truc.map(function (t) { return t.ten.replace(/^Trục (\d) – /, 'T$1 ') + ': ' + t.diem + '/' + t.toiDa; }).join(' | ');
+  }
+  function soanHoSoGui() {
+    var ho = buildHoSo();
+    var kq = E.evaluate(ho);
+    var tt = ho.thongTin || {};
+    var dk = kq.duocXet ? 'Đạt điều kiện nền' : 'CHƯA đạt điều kiện nền (' + kq.dieuKien.filter(function (d) { return !d.dat; }).map(function (d) { return d.nhan; }).join('; ') + ')';
+    var hangTen = kq.hang ? kq.hang.ten : 'Chưa xếp hạng';
+    var tom = '[Máy tính chi tiết 036/VTF (' + R.version + '): ' + kq.tong + '/100đ - ' + hangTen + ' - ' + dk + '] ' + soTruc(kq) +
+      (kq.mucBiLoai.length ? ' | ' + kq.mucBiLoai.length + ' mục không được tính (thiếu minh chứng/thông tin)' : '') +
+      (tt.vaiTroChinh ? ' | Vai trò chính: ' + tt.vaiTroChinh : '') +
+      (tt.nguoiCham ? ' | Người chấm: ' + tt.nguoiCham : '') +
+      (tt.ghiChu ? ' | Ghi chú: ' + tt.ghiChu : '');
+    return {
+      ho: ho, kq: kq,
+      payload: {
+        fullName: String(tt.hoTen || '').trim(),
+        phone: GUI.phone.trim(),
+        email: GUI.email.trim(),
+        organization: String(tt.donVi || '').trim(),
+        submissionType: ho.he === 'A' ? 'nomination_a' : 'nomination_b',
+        yearsContributed: Number(ho.nen && ho.nen.soNam) || 5,
+        estimatedScore: kq.tong,
+        estimatedRank: hangTen,
+        messageOrAchievement: tom.slice(0, 3900),
+        consentAccepted: GUI.dongY === true,
+        ghi_chu_noi_bo_vtf: ''
+      }
+    };
+  }
+  function renderGuiBox() {
+    var kids = [h('h2', { text: 'Gửi hồ sơ chính thức về VTF' })];
+    if (GUI.daGui) {
+      kids.push(h('p', { class: 'save-msg ok', role: 'status', text: 'Văn phòng VTF đã nhận hồ sơ. Mã hồ sơ: ' + GUI.daGui.id + (GUI.daGui.hash ? ' · Mã biên nhận: ' + GUI.daGui.hash : '') + '. Hãy ghi lại mã này.' }));
+      kids.push(h('div', { class: 'actions' }, [h('button', { type: 'button', class: 'btn', 'data-act': 'gui-lai', text: 'Gửi một hồ sơ khác / gửi lại bản sửa' })]));
+      return h('section', { class: 'card save-card gui-card' }, kids);
+    }
+    kids.push(h('p', { class: 'hint', text: 'Lưu vào lịch sử chỉ giữ hồ sơ trên máy này. Muốn Ban Tổ chức nhận và xếp hạng, bấm gửi bên dưới: kết quả chấm được ghi vào bảng tổng hợp của Văn phòng VTF.' }));
+    if (!GUI.open) {
+      kids.push(h('div', { class: 'actions' }, [h('button', { type: 'button', class: 'btn primary', 'data-act': 'gui-mo', text: 'Gửi hồ sơ này về VTF' })]));
+      return h('section', { class: 'card save-card gui-card' }, kids);
+    }
+    function bind(el, key) { el.addEventListener('input', function (e) { GUI[key] = e.target.type === 'checkbox' ? e.target.checked : e.target.value; GUI.msg = ''; var m = $('gui-msg'); if (m) { m.textContent = ''; m.className = 'save-msg'; } }); return el; }
+    kids.push(lbl('Số điện thoại liên hệ', bind(h('input', { type: 'tel', id: 'gui-phone', value: GUI.phone, autocomplete: 'tel', placeholder: '0909 xxx xxx' }), 'phone')));
+    kids.push(lbl('Email liên hệ', bind(h('input', { type: 'email', id: 'gui-email', value: GUI.email, autocomplete: 'email', placeholder: 'ten@donvi.vn' }), 'email')));
+    var cb = bind(h('input', { type: 'checkbox', id: 'gui-dongy', checked: GUI.dongY }), 'dongY');
+    kids.push(h('label', { class: 'check' }, [cb, h('span', { text: 'Tôi đồng ý cung cấp thông tin và tư liệu cho Ban Biên tập Kỷ yếu & Khen thưởng 30 năm VTF (NĐ 13/2023/NĐ-CP). Họ tên, đơn vị lấy từ mục "Thông tin chung".' })]));
+    kids.push(h('div', { class: 'actions' }, [
+      h('button', { type: 'button', class: 'btn primary', 'data-act': 'gui-gui', disabled: GUI.sending, text: GUI.sending ? 'Đang gửi…' : 'Gửi về VTF' }),
+      h('button', { type: 'button', class: 'btn', 'data-act': 'gui-dong', disabled: GUI.sending, text: 'Đóng' })
+    ]));
+    kids.push(h('p', { id: 'gui-msg', class: 'save-msg' + (GUI.msg ? (GUI.ok ? ' ok' : ' bad') : ''), role: 'status', text: GUI.msg }));
+    return h('section', { class: 'card save-card gui-card' }, kids);
+  }
+  function guiMsg(text, ok) { GUI.msg = text; GUI.ok = !!ok; var m = $('gui-msg'); if (m) { m.textContent = text; m.className = 'save-msg ' + (ok ? 'ok' : 'bad'); } }
+  function doGui() {
+    if (GUI.sending) return;
+    if (!/^https?:$/.test(window.location.protocol)) { guiMsg('Bản chạy từ tệp tải về không gửi được. Hãy mở máy tính tại vtf30.tkdai.vn/tinh-diem/index.html để gửi.'); return; }
+    if (!S.he) { guiMsg('Hãy chọn hệ xét trước khi gửi.'); return; }
+    if (!String(S.thongTin.hoTen).trim()) { guiMsg('Nhập họ tên ở mục "Thông tin chung" trước khi gửi.'); return; }
+    if (!String(S.thongTin.donVi).trim()) { guiMsg('Nhập đơn vị (CLB, tỉnh/thành, ngành) ở mục "Thông tin chung" trước khi gửi.'); return; }
+    var ho0 = buildHoSo(); var loi = E.kiemTra(ho0);
+    if (loi.length) { guiMsg('Cần sửa dữ liệu nhập trước khi gửi: ' + loi[0]); return; }
+    if (!/^(0|\+84)[0-9\s.\-]{8,14}$/.test(GUI.phone.trim())) { guiMsg('Số điện thoại chưa đúng chuẩn Việt Nam (10 số bắt đầu bằng 0 hoặc +84).'); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(GUI.email.trim())) { guiMsg('Địa chỉ email chưa hợp lệ.'); return; }
+    if (!GUI.dongY) { guiMsg('Vui lòng tích đồng ý cung cấp thông tin trước khi gửi.'); return; }
+    var p = soanHoSoGui().payload;
+    var dauVan = JSON.stringify(p);
+    if (!GUI.requestId || GUI.dauVan !== dauVan) { GUI.requestId = taoMaYeuCau(); GUI.dauVan = dauVan; }
+    p.requestId = GUI.requestId;
+    GUI.sending = true; renderSaveBox(); guiMsg('Đang gửi hồ sơ…', true);
+    var ctl = ('AbortController' in window) ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctl) ctl.abort(); }, 35000);
+    fetch('/api/submit-nomination', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p), signal: ctl ? ctl.signal : undefined })
+      .then(function (res) { return res.json().catch(function () { return null; }).then(function (d) { return { res: res, d: d }; }); })
+      .then(function (r) {
+        GUI.sending = false;
+        if (r.res.ok && r.d && r.d.ok && r.d.id) {
+          GUI.daGui = { id: r.d.id, hash: r.d.serverReceiptHash || '' };
+          GUI.requestId = ''; GUI.dauVan = ''; GUI.msg = '';
+          renderSaveBox();
+          toast('Đã gửi hồ sơ về VTF. Mã hồ sơ: ' + r.d.id);
+        } else {
+          renderSaveBox();
+          var ct = r.d && r.d.loi && r.d.loi.length ? ' ' + r.d.loi.join(' ') : '';
+          guiMsg(((r.d && r.d.thongBao) || 'Hồ sơ CHƯA được gửi đi. Vui lòng thử lại sau ít phút.') + ct);
+        }
+      })
+      .catch(function () { GUI.sending = false; renderSaveBox(); guiMsg('Hồ sơ CHƯA được gửi đi (mất kết nối hoặc quá thời gian). Thông tin vẫn còn trên màn hình, hãy bấm gửi lại.'); })
+      .then(function () { clearTimeout(timer); });
   }
 
   function applyReadOnly(flag) {
@@ -617,7 +718,7 @@
         step(2, 'Nhập thông tin.', 'Với mỗi mục, đánh dấu "Đã có minh chứng" và ghi số văn bản. Mục thiếu minh chứng không được tính điểm. Điểm, hạng và cách tính hiện ngay bên cạnh (trên điện thoại là thanh ở cuối màn hình).'),
         step(3, 'Lưu và xuất.', 'Bấm "Lưu vào lịch sử" rồi xem lại ở tab Lịch sử. Xuất Excel, tải bản sao lưu ở tab Xuất & Sao lưu; in phiếu chấm điểm A4 để đưa vào biên bản.')
       ]),
-      h('p', { class: 'guide-warn', text: 'Dữ liệu chỉ nằm trong trình duyệt của máy này, không gửi đi đâu. Nếu xóa dữ liệu duyệt web hoặc đổi máy thì sẽ mất, nên hãy tải bản sao lưu sau mỗi đợt chấm.' }),
+      h('p', { class: 'guide-warn', text: 'Hồ sơ bấm "Lưu vào lịch sử" chỉ nằm trong trình duyệt của máy này. Muốn Văn phòng VTF nhận và xếp hạng, hãy bấm "Gửi hồ sơ này về VTF". Nếu xóa dữ liệu duyệt web hoặc đổi máy thì sẽ mất, nên hãy tải bản sao lưu sau mỗi đợt chấm.' }),
       h('div', { class: 'actions' }, [
         h('button', { type: 'button', class: 'btn primary', 'data-act': 'guide-hide', text: 'Đã hiểu, ẩn hướng dẫn' }),
         h('button', { type: 'button', class: 'btn', 'data-act': 'guide-rules', text: 'Xem bảng tiêu chí 036/VTF' })
@@ -1306,6 +1407,10 @@
     else if (act === 'new') newRecord();
     else if (act === 'editview') editFromView();
     else if (act === 'print') inPhieuHienTai();
+    else if (act === 'gui-mo') { GUI.open = true; renderSaveBox(); }
+    else if (act === 'gui-dong') { GUI.open = false; GUI.msg = ''; renderSaveBox(); }
+    else if (act === 'gui-lai') { GUI.daGui = null; GUI.open = true; GUI.msg = ''; renderSaveBox(); }
+    else if (act === 'gui-gui') doGui();
     else if (act === 'unlock') {
       unlockRecord(ctx.recordId, function () { ctx.locked = false; renderSaveBox(); });
     }

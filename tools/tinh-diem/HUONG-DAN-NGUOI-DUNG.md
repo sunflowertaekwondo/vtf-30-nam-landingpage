@@ -1,4 +1,4 @@
-# Hướng dẫn dùng Máy tính điểm vinh danh 30 năm VTF (1 trang)
+﻿# Hướng dẫn dùng Máy tính điểm vinh danh 30 năm VTF (1 trang)
 
 Công cụ tính điểm theo **Bản tiêu chí số 036/VTF (04/04/2026)**. Mở tại `vtf30.tkdai.vn/tinh-diem/index.html`, hoặc bấm "Tải bản dùng offline" để lấy tệp `VTF-Tinh-diem.html` rồi **bấm đúp là chạy**, không cần mạng.
 
@@ -22,7 +22,8 @@ Công cụ tính điểm theo **Bản tiêu chí số 036/VTF (04/04/2026)**. M�
 
 ## Dữ liệu nằm ở đâu, sao lưu thế nào (quan trọng)
 
-- Dữ liệu **chỉ nằm trong trình duyệt của máy này**, không gửi đi đâu. Bản mở từ trang web và bản tệp tải về là **hai kho riêng**.
+- Hồ sơ "Lưu vào lịch sử" **chỉ nằm trong trình duyệt của máy này**. Bản mở từ trang web và bản tệp tải về là **hai kho riêng**.
+- **Để Ban Tổ chức nhận hồ sơ**: sau khi chấm, bấm **"Gửi hồ sơ này về VTF"**, nhập số điện thoại, email, tích đồng ý rồi bấm Gửi. Trang báo **mã hồ sơ (VTF30-xxxx)** khi Văn phòng đã nhận; nếu không thấy mã nghĩa là chưa gửi được. Chức năng này chỉ chạy khi mở máy tính trên `vtf30.tkdai.vn`, không chạy ở bản tệp tải về.
 - **Xóa dữ liệu duyệt web, dùng chế độ ẩn danh, hoặc đổi máy là mất hồ sơ.** Vì vậy hãy vào tab **Xuất & Sao lưu** và bấm **"Tải bản sao lưu (.json)"** sau mỗi đợt chấm. Công cụ sẽ nhắc khi có 20 thay đổi chưa sao lưu hoặc sau 7 ngày.
 - Gửi kết quả về VTF: tải **Excel** (hoặc bản sao lưu) và gửi tệp đó. Văn phòng VTF dùng "Nhập và gộp" để ghép nhiều đơn vị; công cụ báo trùng/xung đột và hỏi cách xử lý trước khi ghi.
 - Nhớ gửi kèm **minh chứng gốc** (quyết định, giấy chứng nhận…) theo Thông báo 038/TB-VTF; công cụ chỉ ghi số văn bản, không lưu ảnh/tệp minh chứng.
